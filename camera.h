@@ -4,7 +4,8 @@
 #include <QObject>
 #include <opencv2/opencv.hpp>
 
-class Camera : public QObject {
+class Camera : public QObject
+{
     Q_OBJECT
 
 public:
