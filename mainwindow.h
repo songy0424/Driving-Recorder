@@ -23,13 +23,16 @@ public:
 private slots:
     void onCameraImageCaptured(const cv::Mat &image);
     void takeSnapshot(); // 拍照槽函数
+    void updateTime();
+
 private:
     Ui::MainWindow *ui;
     Camera *camera;
     QLabel *imageLabel;
     QTimer *timer;
+    QLabel *timeLabel;           // 用于显示时间的QLabel
+    QTimer *timeTimer;           // 用于更新时间的QTimer
     QPushButton *snapshotButton; // 拍照按钮
-    void setupUi();
 };
 
 #endif // MAINWINDOW_H

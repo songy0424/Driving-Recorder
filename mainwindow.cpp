@@ -4,15 +4,17 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDateTime>
+#include <QPainter>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           ui(new Ui::MainWindow),
                                           camera(new Camera(this)),
-                                          //   imageLabel(new QLabel(this)),
-                                          timer(new QTimer(this))
+                                          timer(new QTimer(this)),
+                                          timeTimer(new QTimer(this))
 {
     ui->setupUi(this);
     connect(ui->snapshotButton, &QPushButton::clicked, this, &MainWindow::takeSnapshot);
+    // 每秒更新时间
     // ui->imageLabel->setAlignment(Qt::AlignCenter);
     // ui->imageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // setCentralWidget(imageLabel);
@@ -37,6 +39,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
             } });
         timer->start(33); // Capture a new frame every 33ms
     }
+    timeLabel = new QLabel(this);
+    timeLabel->setFixedSize(150, 30);                                                                                        // 设置固定大小
+    timeLabel->move(ui->imageLabel->width() - timeLabel->width() - 10, ui->imageLabel->height() - timeLabel->height() - 10); // 移动到imageLabel的右下角
+    timeLabel->setStyleSheet("QLabel { color: white; font-size: 12pt; background-color: transparent; }");                    // 设置样式
+    timeLabel->hide();                                                                                                       // 初始时隐藏
+
+    connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽
+    timeTimer->start(1000);
 }
 
 MainWindow::~MainWindow()
@@ -44,18 +54,13 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-// void MainWindow::setupUi()
-// {
-//     QVBoxLayout *layout = new QVBoxLayout(this);
-//     imageLabel->setAlignment(Qt::AlignCenter);
-//     imageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-//     layout->addWidget(imageLabel);
-
-//     snapshotButton = new QPushButton("Take Snapshot", this);
-//     layout->addWidget(snapshotButton, 0, Qt::AlignCenter);
-//     connect(snapshotButton, &QPushButton::clicked, this, &MainWindow::takeSnapshot);
-//     this->setLayout(layout);
-// }
+void MainWindow::updateTime()
+{
+    QString timeString = QDateTime::currentDateTime().toString("yyyy/MM/dd HH:mm:ss");
+    timeLabel->setText(timeString);
+    timeLabel->adjustSize(); // 调整大小以适应文本
+    timeLabel->show();       // 显示时间标签
+}
 
 void MainWindow::onCameraImageCaptured(const cv::Mat &image)
 {
@@ -66,6 +71,7 @@ void MainWindow::onCameraImageCaptured(const cv::Mat &image)
 
     // 最后将转换后的 QImage 设置到 QLabel 上
     ui->imageLabel->setPixmap(QPixmap::fromImage(swappedImage));
+    updateTime(); // 在图像捕获时更新时间
 }
 
 void MainWindow::takeSnapshot()
@@ -79,4 +85,5 @@ void MainWindow::takeSnapshot()
 
     const QPixmap *pixmap = ui->imageLabel->pixmap();
     (*pixmap).save(filePath, "JPEG");
+    updateTime(); // 在拍照时更新时间
 }
