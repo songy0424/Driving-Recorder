@@ -2,21 +2,26 @@
 
 Camera::Camera(QObject *parent) : QObject(parent) {}
 
-Camera::~Camera() {
+Camera::~Camera()
+{
     closeCamera();
 }
 
-bool Camera::openCamera(const std::string &pipeline) {
+bool Camera::openCamera(const std::string &pipeline)
+{
     capture.open(pipeline, cv::CAP_GSTREAMER);
     return capture.isOpened();
 }
 
-void Camera::closeCamera() {
-    if (capture.isOpened()) {
+void Camera::closeCamera()
+{
+    if (capture.isOpened())
+    {
         capture.release();
     }
 }
 
-bool Camera::grabFrame(cv::Mat &frame) {
+bool Camera::grabFrame(cv::Mat &frame)
+{
     return capture.read(frame);
 }
