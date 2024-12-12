@@ -5,6 +5,7 @@
 #include "camera.h"
 #include <QLabel>
 #include <QTimer>
+#include <QPushButton>
 
 namespace Ui
 {
@@ -21,12 +22,13 @@ public:
 
 private slots:
     void onCameraImageCaptured(const cv::Mat &image);
-
+    void takeSnapshot(); // 拍照槽函数
 private:
     Ui::MainWindow *ui;
     Camera *camera;
     QLabel *imageLabel;
     QTimer *timer;
+    QPushButton *snapshotButton; // 拍照按钮
     void setupUi();
 };
 
