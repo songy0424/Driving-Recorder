@@ -22,11 +22,13 @@ public:
 
 private slots:
     void onCameraImageCaptured(const cv::Mat &image);
-    void takeSnapshot(QImage qImage); // 拍照槽函数
+    void takeSnapshot(const QImage &qImage); // 拍照槽函数
     void updateTime();
     void processFrame();
-    void displayFrameOnLabel(QImage qImage);
+    void displayFrameOnLabel(const QImage &qImage);
     void slot_Photograph();
+    void slot_RecordVideo();
+    void slot_SaveVideo(cv::Mat image);
 
 private:
     Ui::MainWindow *ui;
@@ -37,6 +39,7 @@ private:
     QTimer *timeTimer; // 用于更新时间的QTimer
     bool isSaveImage;
     bool isRecordVideo;
+    cv::VideoWriter videorecord;
 };
 
 #endif // MAINWINDOW_H

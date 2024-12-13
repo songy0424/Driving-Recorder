@@ -17,8 +17,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     ui->setupUi(this);
 
     connect(ui->snapshotButton, &QPushButton::clicked, this, &MainWindow::slot_Photograph);
-
-    std::string pipeline = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, format=(string)NV12, framerate=(fraction)30/1 ! "
+    connect(ui->recordButton, &QPushButton::clicked, this, &MainWindow::slot_RecordVideo);
+    std::string pipeline = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, format=(string)NV12, framerate=(fraction)30/1 ! "
                            "nvvidconv flip-method=0 ! video/x-raw, width=(int)1920, height=(int)1080, format=(string)BGRx ! "
                            "videoconvert ! video/x-raw, format=(string)BGR ! appsink";
     // usb camera
@@ -26,19 +26,19 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 
     if (!camera->openCamera(pipeline))
     {
-        qDebug("ÎÞ·¨´ò¿ªÉãÏñÍ·");
+        qDebug("æ— æ³•æ‰“å¼€æ‘„åƒå¤´");
     }
     connect(timer, &QTimer::timeout, this, &MainWindow::processFrame);
     connect(camera, &Camera::imageCaptured, this, &MainWindow::onCameraImageCaptured);
     timer->start(33); // Capture a new frame every 33ms
 
     timeLabel = new QLabel(this);
-    timeLabel->setFixedSize(150, 30);                                                                                        // ÉèÖÃ¹Ì¶¨´óÐ¡
-    timeLabel->move(ui->imageLabel->width() - timeLabel->width() - 10, ui->imageLabel->height() - timeLabel->height() - 10); // ÒÆ¶¯µ½imageLabelµÄÓÒÏÂ½Ç
-    timeLabel->setStyleSheet("QLabel { color: white; font-size: 12pt; background-color: transparent; }");                    // ÉèÖÃÑùÊ½
-    timeLabel->hide();                                                                                                       // ³õÊ¼Ê±Òþ²Ø
+    timeLabel->setFixedSize(150, 30);                                                                                        // è®¾ç½®å›ºå®šå¤§å°
+    timeLabel->move(ui->imageLabel->width() - timeLabel->width() - 10, ui->imageLabel->height() - timeLabel->height() - 10); // ç§»åŠ¨åˆ°imageLabelçš„å³ä¸‹è§’
+    timeLabel->setStyleSheet("QLabel { color: white; font-size: 12pt; background-color: transparent; }");                    // è®¾ç½®æ ·å¼
+    timeLabel->hide();                                                                                                       // åˆå§‹æ—¶éšè—
 
-    connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // Á¬½ÓÐÅºÅºÍ²Û
+    connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // è¿žæŽ¥ä¿¡å·å’Œæ§½
     this->showFullScreen();
     connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showNormal);
     timeTimer->start(1000);
@@ -53,8 +53,8 @@ void MainWindow::updateTime()
 {
     QString timeString = QDateTime::currentDateTime().toString("yyyy/MM/dd HH:mm:ss");
     timeLabel->setText(timeString);
-    timeLabel->adjustSize(); // µ÷Õû´óÐ¡ÒÔÊÊÓ¦ÎÄ±¾
-    timeLabel->show();       // ÏÔÊ¾Ê±¼ä±êÇ©
+    timeLabel->adjustSize(); // è°ƒæ•´å¤§å°ä»¥é€‚åº”æ–‡æœ¬
+    timeLabel->show();       // æ˜¾ç¤ºæ—¶é—´æ ‡ç­¾
 }
 
 void MainWindow::onCameraImageCaptured(const cv::Mat &image)
@@ -72,22 +72,27 @@ void MainWindow::processFrame()
     if (camera->grabFrame(frame))
     {
         QImage qImage(frame.data, frame.cols, frame.rows, static_cast<int>(frame.step), QImage::Format_RGB888);
-        // ¶ÔÖ¡½øÐÐËã·¨²Ù×÷
+        // å¯¹å¸§è¿›è¡Œç®—æ³•æ“ä½œ
         // performAlgorithmOnFrame(frame);
-        QImage swappedImage = qImage.rgbSwapped(); // Ô­±¾Ö¡ÊÇRGB¸ñÊ½£¬¾­¹ýº¯Êýºó±à³ÌBGR¸ñÊ½
+        QImage swappedImage = qImage.rgbSwapped(); // åŽŸæœ¬å¸§æ˜¯RGBæ ¼å¼ï¼Œç»è¿‡å‡½æ•°åŽç¼–ç¨‹BGRæ ¼å¼
 
-        // ½«´¦ÀíºóµÄÖ¡ÏÔÊ¾ÔÚQLabelÉÏ
+        // å°†å¤„ç†åŽçš„å¸§æ˜¾ç¤ºåœ¨QLabelä¸Š
         displayFrameOnLabel(swappedImage);
 
-        // ¼ì²éÊÇ·ñÐèÒªÅÄÕÕ
+        // æ£€æŸ¥æ˜¯å¦éœ€è¦æ‹ç…§
         if (isSaveImage)
         {
             takeSnapshot(swappedImage);
+            isSaveImage = false;
+        }
+        if (isRecordVideo)
+        {
+            slot_SaveVideo(frame); // å°†åŽŸå§‹å¸§ä¿å­˜åˆ°è§†é¢‘æ–‡ä»¶
         }
     }
 }
 
-void MainWindow::displayFrameOnLabel(QImage qImage)
+void MainWindow::displayFrameOnLabel(const QImage &qImage)
 {
     QPixmap pixmap = QPixmap::fromImage(qImage);
     QPixmap scaledPixmap = pixmap.scaled(ui->imageLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
@@ -95,17 +100,52 @@ void MainWindow::displayFrameOnLabel(QImage qImage)
     updateTime();
 }
 
-void MainWindow::takeSnapshot(QImage qImage)
+void MainWindow::takeSnapshot(const QImage &qImage)
 {
-    QString directory = "/home/nvidia/my_project/new_camera"; // ¹Ì¶¨±£´æµØÖ·
-    QDir().mkpath(directory);
-    QDateTime dateTime = QDateTime::currentDateTime();                // Ê¹ÓÃQDateTime                          // È·±£Ä¿Â¼´æÔÚ
-    QString fileName = dateTime.toString("yyyyMMdd_HHmmss") + ".jpg"; // ÎÄ¼þÃûÎªµ±Ç°Ê±¼ä£¬¸ñÊ½Îª YYMMDD_HHmmss
+    QString directory = "/home/nvidia/my_project/new_camera";         // å›ºå®šä¿å­˜åœ°å€
+    QDir().mkpath(directory);                                         // ç¡®ä¿ç›®å½•å­˜åœ¨
+    QDateTime dateTime = QDateTime::currentDateTime();                // ä½¿ç”¨QDateTime
+    QString fileName = dateTime.toString("yyyyMMdd_HHmmss") + ".jpg"; // æ–‡ä»¶åä¸ºå½“å‰æ—¶é—´ï¼Œæ ¼å¼ä¸º YYMMDD_HHmmss
 
     QString filePath = directory + "/" + fileName;
 
-    // const QPixmap *pixmap = ui->imageLabel->pixmap();
     qImage.save(filePath, "JPEG");
-    isSaveImage = false;
-    // updateTime(); // ÔÚÅÄÕÕÊ±¸üÐÂÊ±¼ä
+}
+
+void MainWindow::slot_RecordVideo()
+{
+    if (!videorecord.isOpened() && isRecordVideo == false)
+    {
+        // QString resolution = ui->comboBox_resolution->currentText();
+        // int width = resolution.split("X").at(0).toInt();
+        // int height = resolution.split("X").at(1).toInt();
+        int width = 1920;
+        int height = 1080;
+        cv::Size _size = cv::Size(width, height);
+
+        QString video_name = QString("%1.mp4").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
+
+        videorecord.open(video_name.toStdString(), cv::VideoWriter::fourcc('m', 'p', '4', 'v'), 30, _size, true);
+        if (videorecord.isOpened())
+        {
+            isRecordVideo = true;
+            ui->recordButton->setText("ç»“æŸå½•åˆ¶");
+            // ui->pushButton_recordvideo->setText("ç»“æŸå½•åˆ¶");
+        }
+    }
+    else if (videorecord.isOpened() && isRecordVideo)
+    {
+        ui->recordButton->setText("è§†é¢‘å½•åˆ¶");
+        // ui->pushButton_recordvideo->setText("è§†é¢‘å½•åˆ¶");
+        videorecord.release();
+        isRecordVideo = false;
+    }
+}
+
+void MainWindow::slot_SaveVideo(cv::Mat image)
+{
+    if (isRecordVideo && videorecord.isOpened())
+    {
+        videorecord.write(image);
+    }
 }
