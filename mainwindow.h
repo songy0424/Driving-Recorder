@@ -21,7 +21,6 @@ public:
     ~MainWindow();
 
 private slots:
-    void onCameraImageCaptured(const cv::Mat &image);
     void takeSnapshot(const QImage &qImage); // 拍照槽函数
     void updateTime();
     void processFrame();

@@ -29,8 +29,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
         qDebug("无法打开摄像头");
     }
     connect(timer, &QTimer::timeout, this, &MainWindow::processFrame);
-    connect(camera, &Camera::imageCaptured, this, &MainWindow::onCameraImageCaptured);
-    timer->start(33); // Capture a new frame every 33ms
 
     timeLabel = new QLabel(this);
     timeLabel->setFixedSize(150, 30);                                                                                        // 设置固定大小
@@ -38,14 +36,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     timeLabel->setStyleSheet("QLabel { color: white; font-size: 12pt; background-color: transparent; }");                    // 设置样式
     timeLabel->hide();                                                                                                       // 初始时隐藏
 
-    connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽
     this->showFullScreen();
+    connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽
     connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showNormal);
+    timer->start(33); // Capture a new frame every 33ms
     timeTimer->start(1000);
 }
 
 MainWindow::~MainWindow()
 {
+    camera->closeCamera();
     delete ui;
 }
 
@@ -55,10 +55,6 @@ void MainWindow::updateTime()
     timeLabel->setText(timeString);
     timeLabel->adjustSize(); // 调整大小以适应文本
     timeLabel->show();       // 显示时间标签
-}
-
-void MainWindow::onCameraImageCaptured(const cv::Mat &image)
-{
 }
 
 void MainWindow::slot_Photograph()
@@ -125,7 +121,8 @@ void MainWindow::slot_RecordVideo()
 
         QString video_name = QString("%1.mp4").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
 
-        videorecord.open(video_name.toStdString(), cv::VideoWriter::fourcc('m', 'p', '4', 'v'), 30, _size, true);
+        // 使用H.264编码压缩文件
+        videorecord.open(video_name.toStdString(), cv::VideoWriter::fourcc('a', 'v', 'c', '1'), 10, _size, true);
         if (videorecord.isOpened())
         {
             isRecordVideo = true;

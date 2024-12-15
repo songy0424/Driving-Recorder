@@ -16,9 +16,6 @@ public:
     void closeCamera();
     bool grabFrame(cv::Mat &frame);
 
-signals:
-    void imageCaptured(const cv::Mat &image);
-
 private:
     cv::VideoCapture capture;
 };
