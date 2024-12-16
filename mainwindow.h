@@ -28,6 +28,7 @@ private slots:
     void slot_Photograph();
     void slot_RecordVideo();
     void slot_SaveVideo(cv::Mat image);
+    void updateVideoFile();
 
 private:
     Ui::MainWindow *ui;

@@ -112,29 +112,29 @@ void MainWindow::slot_RecordVideo()
 {
     if (!videorecord.isOpened() && isRecordVideo == false)
     {
-        // QString resolution = ui->comboBox_resolution->currentText();
-        // int width = resolution.split("X").at(0).toInt();
-        // int height = resolution.split("X").at(1).toInt();
         int width = 1920;
         int height = 1080;
         cv::Size _size = cv::Size(width, height);
 
+        // QString video_name = QString("%1.mp4").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
         QString video_name = QString("%1.mp4").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
+        std::string gst_out = "appsrc ! video/x-raw, format=BGR ! queue ! videoconvert ! video/x-raw,format=BGRx ! nvvidconv ! nvv4l2h264enc ! h264parse ! qtmux ! filesink location=" + video_name.toStdString();
 
-        // 使用H.264编码压缩文件
-        videorecord.open(video_name.toStdString(), cv::VideoWriter::fourcc('a', 'v', 'c', '1'), 10, _size, true);
+        videorecord.open(gst_out, cv::CAP_GSTREAMER, 0, 24, _size);
+
         if (videorecord.isOpened())
         {
             isRecordVideo = true;
             ui->recordButton->setText("结束录制");
-            // ui->pushButton_recordvideo->setText("结束录制");
+            // connect(timer, &QTimer::timeout, this, &MainWindow::updateVideoFile);
+            // timer->start(60000); // 设置定时器时间为60000毫秒（1分钟）
         }
     }
     else if (videorecord.isOpened() && isRecordVideo)
     {
         ui->recordButton->setText("视频录制");
-        // ui->pushButton_recordvideo->setText("视频录制");
         videorecord.release();
+        // timer->stop(); // 停止定时器
         isRecordVideo = false;
     }
 }
@@ -145,4 +145,23 @@ void MainWindow::slot_SaveVideo(cv::Mat image)
     {
         videorecord.write(image);
     }
+}
+void MainWindow::updateVideoFile()
+{
+    //     // 生成新的视频文件名
+    //     QString video_name = QString("%1.mp4").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
+    //     std::string gst_out = "appsrc ! video/x-raw, format=BGR ! queue ! videoconvert ! video/x-raw,format=BGRx ! nvvidconv ! nvv4l2h264enc ! h264parse ! qtmux ! filesink location=" + video_name.toStdString();
+
+    //     // 关闭当前视频文件
+    //     videorecord.release();
+
+    //     // 重新打开新的视频文件
+    //     videorecord.open(gst_out, cv::CAP_GSTREAMER, 0, 30, cv::Size(1280, 720));
+
+    //     // 检查是否成功打开新的视频文件
+    //     if (!videorecord.isOpened())
+    //     {
+    //         // 处理打开失败的情况
+    //         std::cerr << "Error: Could not open new video writer." << std::endl;
+    //     }
 }
