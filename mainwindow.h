@@ -27,14 +27,18 @@ private slots:
     void displayFrameOnLabel(const QImage &qImage);
     void slot_Photograph();
     void slot_RecordVideo();
-    void slot_SaveVideo(cv::Mat image);
+    void slot_SaveVideo(const cv::Mat &image);
     void updateVideoFile();
 
 private:
+    int width;     // 类的成员变量，用于宽度
+    int height;    // 类的成员变量，用于高度
+    int frameRate; // 类的成员变量，用于帧率
     Ui::MainWindow *ui;
     Camera *camera;
     QLabel *imageLabel;
     QTimer *timer;
+    QTimer *videoTimer;
     QLabel *timeLabel; // 用于显示时间的QLabel
     QTimer *timeTimer; // 用于更新时间的QTimer
     bool isSaveImage;

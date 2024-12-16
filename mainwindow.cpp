@@ -12,16 +12,24 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           timer(new QTimer(this)),
                                           isSaveImage(false),
                                           isRecordVideo(false),
+                                          videoTimer(new QTimer(this)),
                                           timeTimer(new QTimer(this))
 {
     ui->setupUi(this);
 
     connect(ui->snapshotButton, &QPushButton::clicked, this, &MainWindow::slot_Photograph);
     connect(ui->recordButton, &QPushButton::clicked, this, &MainWindow::slot_RecordVideo);
-    std::string pipeline = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)1920, height=(int)1080, format=(string)NV12, framerate=(fraction)30/1 ! "
-                           "nvvidconv flip-method=0 ! video/x-raw, width=(int)1920, height=(int)1080, format=(string)BGRx ! "
-                           "videoconvert ! video/x-raw, format=(string)BGR ! appsink";
-    // usb camera
+    width = 1280;
+    height = 720;
+    frameRate = 30;
+    std::string pipeline = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)" +
+                           std::to_string(width) + ", height=(int)" +
+                           std::to_string(height) + ", format=(string)NV12, framerate=(fraction)" +
+                           std::to_string(frameRate) + "/1 ! "
+                                                       "nvvidconv flip-method=0 ! video/x-raw, width=(int)" +
+                           std::to_string(width) + ", height=(int)" +
+                           std::to_string(height) + ", format=(string)BGRx ! "
+                                                    "videoconvert ! video/x-raw, format=(string)BGR ! appsink";
     // std::string pipeline = "v4l2src device=/dev/video1 ! video/x-raw, format=YUY2, width=640, height=480, framerate=30/1 ! videoconvert ! appsink";
 
     if (!camera->openCamera(pipeline))
@@ -39,7 +47,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     this->showFullScreen();
     connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽
     connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showNormal);
-    timer->start(33); // Capture a new frame every 33ms
+    timer->start(int(1000 / frameRate)); // 捕获一帧的定时器
     timeTimer->start(1000);
 }
 
@@ -112,34 +120,29 @@ void MainWindow::slot_RecordVideo()
 {
     if (!videorecord.isOpened() && isRecordVideo == false)
     {
-        int width = 1920;
-        int height = 1080;
-        cv::Size _size = cv::Size(width, height);
-
-        // QString video_name = QString("%1.mp4").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
         QString video_name = QString("%1.mp4").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
         std::string gst_out = "appsrc ! video/x-raw, format=BGR ! queue ! videoconvert ! video/x-raw,format=BGRx ! nvvidconv ! nvv4l2h264enc ! h264parse ! qtmux ! filesink location=" + video_name.toStdString();
 
-        videorecord.open(gst_out, cv::CAP_GSTREAMER, 0, 24, _size);
+        videorecord.open(gst_out, cv::CAP_GSTREAMER, 0, frameRate, cv::Size(width, height));
 
         if (videorecord.isOpened())
         {
             isRecordVideo = true;
             ui->recordButton->setText("结束录制");
-            // connect(timer, &QTimer::timeout, this, &MainWindow::updateVideoFile);
-            // timer->start(60000); // 设置定时器时间为60000毫秒（1分钟）
+            connect(videoTimer, &QTimer::timeout, this, &MainWindow::updateVideoFile);
+            videoTimer->start(60000); // 设置定时器时间为60000毫秒（1分钟）
         }
     }
     else if (videorecord.isOpened() && isRecordVideo)
     {
         ui->recordButton->setText("视频录制");
         videorecord.release();
-        // timer->stop(); // 停止定时器
+        videoTimer->stop(); // 停止定时器
         isRecordVideo = false;
     }
 }
 
-void MainWindow::slot_SaveVideo(cv::Mat image)
+void MainWindow::slot_SaveVideo(const cv::Mat &image)
 {
     if (isRecordVideo && videorecord.isOpened())
     {
@@ -148,20 +151,13 @@ void MainWindow::slot_SaveVideo(cv::Mat image)
 }
 void MainWindow::updateVideoFile()
 {
-    //     // 生成新的视频文件名
-    //     QString video_name = QString("%1.mp4").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
-    //     std::string gst_out = "appsrc ! video/x-raw, format=BGR ! queue ! videoconvert ! video/x-raw,format=BGRx ! nvvidconv ! nvv4l2h264enc ! h264parse ! qtmux ! filesink location=" + video_name.toStdString();
+    // 生成新的视频文件名
+    QString video_name = QString("%1.mp4").arg(QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss"));
+    std::string gst_out = "appsrc ! video/x-raw, format=BGR ! queue ! videoconvert ! video/x-raw,format=BGRx ! nvvidconv ! nvv4l2h264enc ! h264parse ! qtmux ! filesink location=" + video_name.toStdString();
 
-    //     // 关闭当前视频文件
-    //     videorecord.release();
+    // 关闭当前视频文件
+    videorecord.release();
 
-    //     // 重新打开新的视频文件
-    //     videorecord.open(gst_out, cv::CAP_GSTREAMER, 0, 30, cv::Size(1280, 720));
-
-    //     // 检查是否成功打开新的视频文件
-    //     if (!videorecord.isOpened())
-    //     {
-    //         // 处理打开失败的情况
-    //         std::cerr << "Error: Could not open new video writer." << std::endl;
-    //     }
+    // 重新打开新的视频文件
+    videorecord.open(gst_out, cv::CAP_GSTREAMER, 0, frameRate, cv::Size(width, height));
 }
