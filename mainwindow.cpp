@@ -54,8 +54,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
         "min-width:20px;min-height:20px;max-width:20px;max-height:20px;border-radius:10px;border:1px solid black;background:red";
     recordingLabel_1->setStyleSheet(label_style);
     recordingLabel_2->setStyleSheet("QLabel { color: white; font-size: 15pt; background-color: transparent; }");
-    recordingLabel_1->hide(); // 初始时隐藏
-    recordingLabel_2->hide(); // 初始时隐藏
+    recordingLabel_1->hide();                                                // 初始时隐藏
+    recordingLabel_2->hide();                                                // 初始时隐藏
+    startIcon = QIcon("/home/nvidia/my_project/new_camera/image/start.png"); // 假设图标文件名为 start.png
+    stopIcon = QIcon("/home/nvidia/my_project/new_camera/image/stop.png");   // 假设图标文件名为 stop.png
+                                                                             // 设置按钮初始图标为开始图标
+    ui->recordButton->setIcon(startIcon);
+    ui->recordButton->setIconSize(QSize(80, 80)); // 设置图标大小
 
     this->showFullScreen();
     connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽
@@ -141,7 +146,9 @@ void MainWindow::slot_RecordVideo()
         if (videorecord.isOpened())
         {
             isRecordVideo = true;
-            ui->recordButton->setText("结束录制");
+            // ui->recordButton->setText("结束录制");
+            ui->recordButton->setIcon(stopIcon);
+
             recordingLabel_1->show(); // 显示录制中的标签
             recordingLabel_2->show(); // 显示录制中的标签
 
@@ -151,7 +158,8 @@ void MainWindow::slot_RecordVideo()
     }
     else if (videorecord.isOpened() && isRecordVideo)
     {
-        ui->recordButton->setText("视频录制");
+        // ui->recordButton->setText("视频录制");
+        ui->recordButton->setIcon(startIcon);
         videorecord.release();
         videoTimer->stop(); // 停止定时器
         isRecordVideo = false;

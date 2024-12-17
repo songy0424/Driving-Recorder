@@ -38,8 +38,8 @@
      <rect>
       <x>262</x>
       <y>500</y>
-      <width>100</width>
-      <height>30</height>
+      <width>80</width>
+      <height>80</height>
      </rect>
     </property>
     <property name="text">
@@ -51,8 +51,8 @@
      <rect>
       <x>462</x>
       <y>500</y>
-      <width>100</width>
-      <height>30</height>
+      <width>80</width>
+      <height>80</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -62,7 +62,10 @@
      </sizepolicy>
     </property>
     <property name="text">
-     <string>Record Video</string>
+     <string/>
+    </property>
+    <property name="flat">
+     <bool>true</bool>
     </property>
    </widget>
    <widget class="QPushButton" name="testButton">
@@ -70,8 +73,8 @@
      <rect>
       <x>662</x>
       <y>500</y>
-      <width>100</width>
-      <height>30</height>
+      <width>80</width>
+      <height>80</height>
      </rect>
     </property>
     <property name="text">

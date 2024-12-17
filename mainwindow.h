@@ -43,6 +43,8 @@ private:
     QTimer *timeTimer;        // 用于更新时间的QTimer
     QLabel *recordingLabel_1; // 用于显示录制中的QLabel
     QLabel *recordingLabel_2; // 用于显示录制中的QLabel
+    QIcon startIcon;
+    QIcon stopIcon;
     bool isSaveImage;
     bool isRecordVideo;
     cv::VideoWriter videorecord;
