@@ -36,11 +36,11 @@ private:
     int frameRate; // 类的成员变量，用于帧率
     Ui::MainWindow *ui;
     Camera *camera;
-    QLabel *imageLabel;
-    QTimer *timer;
-    QTimer *videoTimer;
-    QLabel *timeLabel; // 用于显示时间的QLabel
-    QTimer *timeTimer; // 用于更新时间的QTimer
+    QLabel *imageLabel; // 用于显示图片的QTimer
+    QTimer *timer;      // 用于捕获帧的QTimer
+    QTimer *videoTimer; // 用于循环录制的QTimer
+    QLabel *timeLabel;  // 用于显示时间的QLabel
+    QTimer *timeTimer;  // 用于更新时间的QTimer
     bool isSaveImage;
     bool isRecordVideo;
     cv::VideoWriter videorecord;

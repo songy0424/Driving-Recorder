@@ -39,10 +39,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     connect(timer, &QTimer::timeout, this, &MainWindow::processFrame);
 
     timeLabel = new QLabel(this);
-    timeLabel->setFixedSize(150, 30);                                                                                        // 设置固定大小
-    timeLabel->move(ui->imageLabel->width() - timeLabel->width() - 10, ui->imageLabel->height() - timeLabel->height() - 10); // 移动到imageLabel的右下角
-    timeLabel->setStyleSheet("QLabel { color: white; font-size: 12pt; background-color: transparent; }");                    // 设置样式
-    timeLabel->hide();                                                                                                       // 初始时隐藏
+    timeLabel->setFixedSize(150, 30);                                                                     // 设置固定大小
+    timeLabel->move(ui->imageLabel->width() - timeLabel->width() - 10, timeLabel->height() - 10);         // 移动到imageLabel的右下角
+    timeLabel->setStyleSheet("QLabel { color: white; font-size: 12pt; background-color: transparent; }"); // 设置样式
+    timeLabel->hide();                                                                                    // 初始时隐藏
 
     this->showFullScreen();
     connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽
