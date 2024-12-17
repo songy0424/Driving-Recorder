@@ -40,9 +40,22 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 
     timeLabel = new QLabel(this);
     timeLabel->setFixedSize(150, 30);                                                                     // 设置固定大小
-    timeLabel->move(ui->imageLabel->width() - timeLabel->width() - 10, timeLabel->height() - 10);         // 移动到imageLabel的右下角
+    timeLabel->move(ui->imageLabel->width() - timeLabel->width() - 10, 10);                               // 移动到imageLabel的右下角
     timeLabel->setStyleSheet("QLabel { color: white; font-size: 12pt; background-color: transparent; }"); // 设置样式
     timeLabel->hide();                                                                                    // 初始时隐藏
+
+    recordingLabel_1 = new QLabel(this); // 初始化录制中的标签
+    recordingLabel_2 = new QLabel(this); // 初始化录制中的标签
+    recordingLabel_2->setText("录像中");
+    recordingLabel_2->setFixedSize(150, 30);
+    recordingLabel_1->move(15, 15); // 移动到imageLabel的左上角
+    recordingLabel_2->move(45, 10); // 移动到imageLabel的左上角
+    const QString label_style =
+        "min-width:20px;min-height:20px;max-width:20px;max-height:20px;border-radius:10px;border:1px solid black;background:red";
+    recordingLabel_1->setStyleSheet(label_style);
+    recordingLabel_2->setStyleSheet("QLabel { color: white; font-size: 15pt; background-color: transparent; }");
+    recordingLabel_1->hide(); // 初始时隐藏
+    recordingLabel_2->hide(); // 初始时隐藏
 
     this->showFullScreen();
     connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽
@@ -129,6 +142,9 @@ void MainWindow::slot_RecordVideo()
         {
             isRecordVideo = true;
             ui->recordButton->setText("结束录制");
+            recordingLabel_1->show(); // 显示录制中的标签
+            recordingLabel_2->show(); // 显示录制中的标签
+
             connect(videoTimer, &QTimer::timeout, this, &MainWindow::updateVideoFile);
             videoTimer->start(60000); // 设置定时器时间为60000毫秒（1分钟）
         }
@@ -139,6 +155,8 @@ void MainWindow::slot_RecordVideo()
         videorecord.release();
         videoTimer->stop(); // 停止定时器
         isRecordVideo = false;
+        recordingLabel_1->hide(); // 隐藏录制中的标签
+        recordingLabel_2->hide(); // 隐藏录制中的标签
     }
 }
 
