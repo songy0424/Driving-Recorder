@@ -17,6 +17,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 {
     ui->setupUi(this);
     ui->label->setStyleSheet("QLabel{background-color:rgb(255,0,0);}");
+
+    settingsPage = new SettingsPage(this);                                                 // 创建设置页面实例
+    connect(settingsPage, &SettingsPage::returnToMainWindow, this, &MainWindow::showMain); // 连接信号和槽
+
+    connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showSettings); // 连接信号和槽
     connect(ui->snapshotButton, &QPushButton::clicked, this, &MainWindow::slot_Photograph);
     connect(ui->recordButton, &QPushButton::clicked, this, &MainWindow::slot_RecordVideo);
     width = 1280;
@@ -87,6 +92,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 MainWindow::~MainWindow()
 {
     camera->closeCamera();
+    delete settingsPage; // 确保删除设置页面
     delete ui;
 }
 
@@ -190,6 +196,7 @@ void MainWindow::slot_SaveVideo(const cv::Mat &image)
         videorecord.write(image);
     }
 }
+
 void MainWindow::updateVideoFile()
 {
     // 生成新的视频文件名
@@ -201,4 +208,20 @@ void MainWindow::updateVideoFile()
 
     // 重新打开新的视频文件
     videorecord.open(gst_out, cv::CAP_GSTREAMER, 0, frameRate, cv::Size(width, height));
+}
+
+void MainWindow::showSettings()
+{
+    this->hide();                                                       // 隐藏主窗口
+    settingsPage->setWindowTitle("Settings");                           // 设置窗口标题
+    settingsPage->setWindowFlags(Qt::FramelessWindowHint | Qt::Window); // 设置无边框窗口
+    settingsPage->setStyleSheet("SettingsPage { background-color: #FFFFFF; }");
+    settingsPage->show();           // 显示设置页面
+    settingsPage->showFullScreen(); // 设置窗口为全屏
+}
+
+void MainWindow::showMain()
+{
+    settingsPage->hide(); // 隐藏设置页面
+    this->show();         // 显示主窗口
 }

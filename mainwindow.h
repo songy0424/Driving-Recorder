@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QTimer>
 #include <QPushButton>
+#include "settingspage.h"
 
 namespace Ui
 {
@@ -29,6 +30,8 @@ private slots:
     void slot_RecordVideo();
     void slot_SaveVideo(const cv::Mat &image);
     void updateVideoFile();
+    void showSettings(); // 切换到设置页面的槽函数
+    void showMain();     // 显示主窗口的槽函数
 
 private:
     int width;     // 类的成员变量，用于宽度
@@ -50,6 +53,7 @@ private:
     bool isSaveImage;
     bool isRecordVideo;
     cv::VideoWriter videorecord;
+    SettingsPage *settingsPage; // 设置页面的指针
 };
 
 #endif // MAINWINDOW_H
