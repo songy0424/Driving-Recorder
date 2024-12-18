@@ -48,8 +48,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     recordingLabel_2 = new QLabel(this); // 初始化录制中的标签
     recordingLabel_2->setText("录像中");
     recordingLabel_2->setFixedSize(150, 30);
-    recordingLabel_1->move(15, 15); // 移动到imageLabel的左上角
-    recordingLabel_2->move(45, 10); // 移动到imageLabel的左上角
+    recordingLabel_1->move(15, 40); // 移动到imageLabel的左上角
+    recordingLabel_2->move(45, 35); // 移动到imageLabel的左上角
     const QString label_style =
         "min-width:20px;min-height:20px;max-width:20px;max-height:20px;border-radius:10px;border:1px solid black;background:red";
     recordingLabel_1->setStyleSheet(label_style);
