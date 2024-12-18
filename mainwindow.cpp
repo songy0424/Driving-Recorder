@@ -16,7 +16,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           timeTimer(new QTimer(this))
 {
     ui->setupUi(this);
-
+    this->setStyleSheet("background-color: transparent;");
+    ui->label->setStyleSheet("QLabel{background-color:rgb(0,0,0);}");
     connect(ui->snapshotButton, &QPushButton::clicked, this, &MainWindow::slot_Photograph);
     connect(ui->recordButton, &QPushButton::clicked, this, &MainWindow::slot_RecordVideo);
     width = 1280;
@@ -54,13 +55,30 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
         "min-width:20px;min-height:20px;max-width:20px;max-height:20px;border-radius:10px;border:1px solid black;background:red";
     recordingLabel_1->setStyleSheet(label_style);
     recordingLabel_2->setStyleSheet("QLabel { color: white; font-size: 15pt; background-color: transparent; }");
-    recordingLabel_1->hide();                                                // 初始时隐藏
-    recordingLabel_2->hide();                                                // 初始时隐藏
-    startIcon = QIcon("/home/nvidia/my_project/new_camera/image/start.png"); // 假设图标文件名为 start.png
-    stopIcon = QIcon("/home/nvidia/my_project/new_camera/image/stop.png");   // 假设图标文件名为 stop.png
-                                                                             // 设置按钮初始图标为开始图标
+    recordingLabel_1->hide();                                                        // 初始时隐藏
+    recordingLabel_2->hide();                                                        // 初始时隐藏
+    startIcon = QIcon("/home/nvidia/my_project/new_camera/image/start.png");         // 假设图标文件名为 start.png
+    stopIcon = QIcon("/home/nvidia/my_project/new_camera/image/stop.png");           // 假设图标文件名为 stop.png
+    takePhotoIcon = QIcon("/home/nvidia/my_project/new_camera/image/takePhoto.png"); // 假设图标文件名为 stop.png
+    settingIcon = QIcon("/home/nvidia/my_project/new_camera/image/setting.png");     // 假设图标文件名为 stop.png
+
+    ui->recordButton->setStyleSheet("");
+    ui->snapshotButton->setStyleSheet("QPushButton { background-color: rgba(0, 0, 0, 0); }"
+                                      "QPushButton:pressed { background-color: rgba(0, 0, 0, 0); }");
     ui->recordButton->setIcon(startIcon);
     ui->recordButton->setIconSize(QSize(80, 80)); // 设置图标大小
+
+    ui->snapshotButton->setStyleSheet("");
+    ui->snapshotButton->setStyleSheet("QPushButton { background-color: rgba(0, 0, 0, 0); }"
+                                      "QPushButton:pressed { background-color: rgba(0, 0, 0, 0); }");
+    ui->snapshotButton->setIcon(takePhotoIcon);
+    ui->snapshotButton->setIconSize(QSize(80, 80));
+
+    ui->testButton->setStyleSheet("");
+    ui->testButton->setStyleSheet("QPushButton { background-color: rgba(0, 0, 0, 0); }"
+                                  "QPushButton:pressed { background-color: rgba(0, 0, 0, 0); }");
+    ui->testButton->setIcon(settingIcon);
+    ui->testButton->setIconSize(QSize(80, 80));
 
     this->showFullScreen();
     connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽

@@ -45,6 +45,8 @@ private:
     QLabel *recordingLabel_2; // 用于显示录制中的QLabel
     QIcon startIcon;
     QIcon stopIcon;
+    QIcon takePhotoIcon;
+    QIcon settingIcon;
     bool isSaveImage;
     bool isRecordVideo;
     cv::VideoWriter videorecord;
