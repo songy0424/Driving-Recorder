@@ -16,8 +16,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           timeTimer(new QTimer(this))
 {
     ui->setupUi(this);
-    this->setStyleSheet("background-color: transparent;");
-    ui->label->setStyleSheet("QLabel{background-color:rgb(0,0,0);}");
+    ui->label->setStyleSheet("QLabel{background-color:rgb(255,0,0);}");
     connect(ui->snapshotButton, &QPushButton::clicked, this, &MainWindow::slot_Photograph);
     connect(ui->recordButton, &QPushButton::clicked, this, &MainWindow::slot_RecordVideo);
     width = 1280;
@@ -41,7 +40,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 
     timeLabel = new QLabel(this);
     timeLabel->setFixedSize(150, 30);                                                                     // 设置固定大小
-    timeLabel->move(ui->imageLabel->width() - timeLabel->width() - 10, 10);                               // 移动到imageLabel的右下角
+    timeLabel->move(ui->imageLabel->width() - timeLabel->width() - 10, 0);                                // 移动到imageLabel的右下角
     timeLabel->setStyleSheet("QLabel { color: white; font-size: 12pt; background-color: transparent; }"); // 设置样式
     timeLabel->hide();                                                                                    // 初始时隐藏
 
@@ -55,28 +54,26 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
         "min-width:20px;min-height:20px;max-width:20px;max-height:20px;border-radius:10px;border:1px solid black;background:red";
     recordingLabel_1->setStyleSheet(label_style);
     recordingLabel_2->setStyleSheet("QLabel { color: white; font-size: 15pt; background-color: transparent; }");
-    recordingLabel_1->hide();                                                        // 初始时隐藏
-    recordingLabel_2->hide();                                                        // 初始时隐藏
+    recordingLabel_1->hide(); // 初始时隐藏
+    recordingLabel_2->hide(); // 初始时隐藏
+
     startIcon = QIcon("/home/nvidia/my_project/new_camera/image/start.png");         // 假设图标文件名为 start.png
     stopIcon = QIcon("/home/nvidia/my_project/new_camera/image/stop.png");           // 假设图标文件名为 stop.png
     takePhotoIcon = QIcon("/home/nvidia/my_project/new_camera/image/takePhoto.png"); // 假设图标文件名为 stop.png
     settingIcon = QIcon("/home/nvidia/my_project/new_camera/image/setting.png");     // 假设图标文件名为 stop.png
 
     ui->recordButton->setStyleSheet("");
-    ui->snapshotButton->setStyleSheet("QPushButton { background-color: rgba(0, 0, 0, 0); }"
-                                      "QPushButton:pressed { background-color: rgba(0, 0, 0, 0); }");
+    ui->recordButton->setStyleSheet("QPushButton { border:none; background-color: transparent; }");
     ui->recordButton->setIcon(startIcon);
     ui->recordButton->setIconSize(QSize(80, 80)); // 设置图标大小
 
     ui->snapshotButton->setStyleSheet("");
-    ui->snapshotButton->setStyleSheet("QPushButton { background-color: rgba(0, 0, 0, 0); }"
-                                      "QPushButton:pressed { background-color: rgba(0, 0, 0, 0); }");
+    ui->snapshotButton->setStyleSheet("QPushButton { border:none; background-color: transparent; }");
     ui->snapshotButton->setIcon(takePhotoIcon);
     ui->snapshotButton->setIconSize(QSize(80, 80));
 
     ui->testButton->setStyleSheet("");
-    ui->testButton->setStyleSheet("QPushButton { background-color: rgba(0, 0, 0, 0); }"
-                                  "QPushButton:pressed { background-color: rgba(0, 0, 0, 0); }");
+    ui->testButton->setStyleSheet("QPushButton { border:none; background-color: transparent; }");
     ui->testButton->setIcon(settingIcon);
     ui->testButton->setIconSize(QSize(80, 80));
 

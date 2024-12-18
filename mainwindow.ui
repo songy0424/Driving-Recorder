@@ -103,7 +103,7 @@
      <enum>Qt::RightToLeft</enum>
     </property>
     <property name="text">
-     <string>it is a te</string>
+     <string/>
     </property>
    </widget>
   </widget>
