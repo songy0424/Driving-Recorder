@@ -116,7 +116,16 @@ void MainWindow::processFrame()
     cv::Mat frame;
     if (camera->grabFrame(frame))
     {
+        std::string timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss").toStdString();
+
+        // 将时间文本绘制到图像帧上
+        int x = frame.cols - 385; // 将文本放置在帧的左上角
+        int y = 50;               // 留出一些边距
+
+        cv::putText(frame, timestamp, cv::Point(x, y), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255), 2);
+
         QImage qImage(frame.data, frame.cols, frame.rows, static_cast<int>(frame.step), QImage::Format_RGB888);
+
         // 对帧进行算法操作
         // performAlgorithmOnFrame(frame);
         QImage swappedImage = qImage.rgbSwapped(); // 原本帧是RGB格式，经过函数后编程BGR格式

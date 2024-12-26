@@ -19,6 +19,10 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     QPushButton *startupWifiButton = new QPushButton("开机 Wi-Fi 设置: 关 >", this);
     QPushButton *screenTimeoutButton = new QPushButton("息屏时间: 1分钟 >", this);
     QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
+    // 夜间模式、时间水印、、关于设备
+    //  QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
+    //  QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
+    //  QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
 
     // 将按钮添加到主界面布局
     mainLayout->addWidget(wifiHotspotButton);
@@ -30,7 +34,7 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     mainPage->setLayout(mainLayout);
     stackedWidget->addWidget(mainPage); // 添加主界面到堆叠布局
 
-    // 创建三个选择界面
+    // 创建选择界面
     QWidget *wifiHotspotPage = createBooleanSelectionPage("Wi-Fi 热点", wifiHotspotButton);
     QWidget *startupWifiPage = createBooleanSelectionPage("开机 Wi-Fi 设置", startupWifiButton);
     QWidget *screenTimeoutPage = createTimeoutSelectionPage(screenTimeoutButton);
