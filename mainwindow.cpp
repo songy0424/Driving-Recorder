@@ -13,20 +13,22 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           isSaveImage(false),
                                           isRecordVideo(false),
                                           videoTimer(new QTimer(this)),
-                                          timeTimer(new QTimer(this))
+                                          timeTimer(new QTimer(this)),
+                                          width(1280),  // 默认分辨率宽度
+                                          height(720),  // 默认分辨率高度
+                                          frameRate(30) // 默认帧率
 {
     ui->setupUi(this);
     ui->label->setStyleSheet("QLabel{background-color:rgb(255,0,0);}");
 
     settingsPage = new SettingsPage(this);                                                 // 创建设置页面实例
     connect(settingsPage, &SettingsPage::returnToMainWindow, this, &MainWindow::showMain); // 连接信号和槽
+    connect(settingsPage, &SettingsPage::resolutionChanged, this, &MainWindow::updateResolution);
 
     connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showSettings); // 连接信号和槽
     connect(ui->snapshotButton, &QPushButton::clicked, this, &MainWindow::slot_Photograph);
     connect(ui->recordButton, &QPushButton::clicked, this, &MainWindow::slot_RecordVideo);
-    width = 1280;
-    height = 720;
-    frameRate = 30;
+
     std::string pipeline = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)" +
                            std::to_string(width) + ", height=(int)" +
                            std::to_string(height) + ", format=(string)NV12, framerate=(fraction)" +
@@ -167,7 +169,6 @@ void MainWindow::slot_RecordVideo()
         if (videorecord.isOpened())
         {
             isRecordVideo = true;
-            // ui->recordButton->setText("结束录制");
             ui->recordButton->setIcon(stopIcon);
 
             recordingLabel_1->show(); // 显示录制中的标签
@@ -224,4 +225,26 @@ void MainWindow::showMain()
 {
     settingsPage->hide(); // 隐藏设置页面
     this->show();         // 显示主窗口
+}
+
+void MainWindow::updateResolution(int width, int height, int frameRate)
+{
+    // 更新摄像头分辨率
+    this->width = width; // 这里只是示例，实际中您可能需要更新全局变量或成员变量
+    this->height = height;
+    this->frameRate = frameRate; // 假设帧率保持不变
+    std::string pipeline = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)" +
+                           std::to_string(width) + ", height=(int)" +
+                           std::to_string(height) + ", format=(string)NV12, framerate=(fraction)" +
+                           std::to_string(frameRate) + "/1 ! "
+                                                       "nvvidconv flip-method=0 ! video/x-raw, width=(int)" +
+                           std::to_string(width) + ", height=(int)" +
+                           std::to_string(height) + ", format=(string)BGRx ! "
+                                                    "videoconvert ! video/x-raw, format=(string)BGR ! appsink";
+
+    camera->closeCamera();
+    if (!camera->openCamera(pipeline))
+    {
+        qDebug("无法打开摄像头");
+    }
 }

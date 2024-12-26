@@ -32,6 +32,7 @@ private slots:
     void updateVideoFile();
     void showSettings(); // 切换到设置页面的槽函数
     void showMain();     // 显示主窗口的槽函数
+    void updateResolution(int width, int height, int frameRate);
 
 private:
     int width;     // 类的成员变量，用于宽度
