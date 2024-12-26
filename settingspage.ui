@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>1024</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,14 +16,24 @@
   <widget class="QPushButton" name="returnButton">
    <property name="geometry">
     <rect>
-     <x>190</x>
-     <y>230</y>
-     <width>80</width>
-     <height>26</height>
+     <x>50</x>
+     <y>50</y>
+     <width>50</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="text">
     <string>PushButton</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="resolutionComboBox">
+   <property name="geometry">
+    <rect>
+     <x>820</x>
+     <y>90</y>
+     <width>200</width>
+     <height>60</height>
+    </rect>
    </property>
   </widget>
  </widget>

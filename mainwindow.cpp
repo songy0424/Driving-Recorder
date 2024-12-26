@@ -214,11 +214,9 @@ void MainWindow::updateVideoFile()
 void MainWindow::showSettings()
 {
     this->hide();                                                       // 隐藏主窗口
-    settingsPage->setWindowTitle("Settings");                           // 设置窗口标题
     settingsPage->setWindowFlags(Qt::FramelessWindowHint | Qt::Window); // 设置无边框窗口
-    settingsPage->setStyleSheet("SettingsPage { background-color: #FFFFFF; }");
-    settingsPage->show();           // 显示设置页面
-    settingsPage->showFullScreen(); // 设置窗口为全屏
+    settingsPage->show();                                               // 显示设置页面
+    settingsPage->showFullScreen();                                     // 设置窗口为全屏
 }
 
 void MainWindow::showMain()

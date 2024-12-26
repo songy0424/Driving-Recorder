@@ -2,7 +2,13 @@
 #define SETTINGSPAGE_H
 
 #include <QWidget>
-#include <QComboBox>
+#include <QPushButton>
+#include <QLabel>
+#include <QHBoxLayout>
+#include <QStackedWidget>
+#include <QRadioButton>
+#include <QGroupBox>
+#include <QSpacerItem>
 
 namespace Ui
 {
@@ -26,7 +32,11 @@ private slots:
 
 private:
     Ui::SettingsPage *ui;
-    QComboBox *resolutionComboBox;
+    QStackedWidget *stackedWidget;
+
+    QWidget *createBooleanSelectionPage(const QString &title, QPushButton *mainButton);
+    QWidget *createTimeoutSelectionPage(QPushButton *mainButton);
+    QWidget *createResolutionSelectionPage(QPushButton *mainButton);
 };
 
 #endif // SETTINGSPAGE_H
