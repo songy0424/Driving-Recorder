@@ -9,7 +9,6 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
 {
     ui->setupUi(this);
     this->hide();
-    connect(ui->returnButton, &QPushButton::clicked, this, &SettingsPage::returnToMain);
 
     // 主布局
     QWidget *mainPage = new QWidget(this);
@@ -19,7 +18,17 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     QPushButton *startupWifiButton = new QPushButton("开机 Wi-Fi 设置: 关 >", this);
     QPushButton *screenTimeoutButton = new QPushButton("息屏时间: 1分钟 >", this);
     QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
-    // 夜间模式、时间水印、、关于设备
+    wifiHotspotButton->setMinimumSize(100, 70);
+    startupWifiButton->setMinimumSize(100, 70);
+    screenTimeoutButton->setMinimumSize(100, 70);
+    resolutionSelectionButton->setMinimumSize(100, 70);
+    ui->returnButton->setMinimumSize(100, 70);
+    wifiHotspotButton->setStyleSheet("QPushButton { font-size: 16px;}");
+    startupWifiButton->setStyleSheet("QPushButton { font-size: 16px;}");
+    screenTimeoutButton->setStyleSheet("QPushButton { font-size: 16px;}");
+    resolutionSelectionButton->setStyleSheet("QPushButton { font-size: 16px;}");
+    ui->returnButton->setStyleSheet("QPushButton { font-size: 16px;}");
+    // 夜间模式、时间水印、关于设备
     //  QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
     //  QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
     //  QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
@@ -29,6 +38,7 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     mainLayout->addWidget(startupWifiButton);
     mainLayout->addWidget(screenTimeoutButton);
     mainLayout->addWidget(resolutionSelectionButton);
+    mainLayout->addWidget(ui->returnButton);
     mainLayout->addStretch(); // 添加弹性空间，避免按钮堆积
 
     mainPage->setLayout(mainLayout);
@@ -58,6 +68,7 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
             { stackedWidget->setCurrentWidget(screenTimeoutPage); });
     connect(resolutionSelectionButton, &QPushButton::clicked, this, [=]()
             { stackedWidget->setCurrentWidget(resolutionSelectionPage); });
+    connect(ui->returnButton, &QPushButton::clicked, this, &SettingsPage::returnToMain);
 }
 
 QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushButton *mainButton)
@@ -70,6 +81,7 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
 
     QRadioButton *onButton = new QRadioButton("开", this);
     QRadioButton *offButton = new QRadioButton("关", this);
+
     offButton->setChecked(true); // 默认选择“关”
 
     groupLayout->addWidget(onButton);
@@ -78,6 +90,13 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
 
     // 返回按钮
     QPushButton *confirmButton = new QPushButton("确定", this);
+
+    onButton->setMinimumSize(100, 70);
+    offButton->setMinimumSize(100, 70);
+    confirmButton->setMinimumSize(100, 70);
+    onButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    offButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    confirmButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     layout->addWidget(groupBox);
     layout->addStretch(); // 增加弹性空间，使返回按钮居底部
@@ -122,6 +141,17 @@ QWidget *SettingsPage::createTimeoutSelectionPage(QPushButton *mainButton)
     groupBox->setLayout(groupLayout);
 
     QPushButton *confirmButton = new QPushButton("确定", this);
+
+    oneMinButton->setMinimumSize(100, 70);
+    fiveMinButton->setMinimumSize(100, 70);
+    tenMinButton->setMinimumSize(100, 70);
+    thirtyMinButton->setMinimumSize(100, 70);
+    confirmButton->setMinimumSize(100, 70);
+    oneMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    fiveMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    tenMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    thirtyMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    confirmButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     layout->addWidget(groupBox);
     layout->addStretch(); // 增加弹性空间
@@ -170,6 +200,13 @@ QWidget *SettingsPage::createResolutionSelectionPage(QPushButton *mainButton)
     groupBox->setLayout(groupLayout);
 
     QPushButton *confirmButton = new QPushButton("确定", this);
+
+    res720pButton->setMinimumSize(100, 70);
+    res1080pButton->setMinimumSize(100, 70);
+    confirmButton->setMinimumSize(100, 70);
+    res720pButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    res1080pButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    confirmButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     layout->addWidget(groupBox);
     layout->addStretch(); // 弹性布局让按钮居底
