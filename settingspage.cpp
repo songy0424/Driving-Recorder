@@ -2,10 +2,13 @@
 #include "settingspage.h"
 #include "ui_settingspage.h"
 #include <QVBoxLayout>
+#include <QProcess>
 
 SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
                                               ui(new Ui::SettingsPage),
-                                              stackedWidget(new QStackedWidget(this))
+                                              stackedWidget(new QStackedWidget(this)),
+                                              wifiHotspotButton(new QPushButton(this)),
+                                              isHotspotActive(false)
 {
     ui->setupUi(this);
     this->hide();
@@ -13,8 +16,7 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     // 主布局
     QWidget *mainPage = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(mainPage);
-
-    QPushButton *wifiHotspotButton = new QPushButton("Wi-Fi 热点: 关 >", this);
+    wifiHotspotButton->setText("Wi-Fi 热点: 关 >");
     QPushButton *startupWifiButton = new QPushButton("开机 Wi-Fi 设置: 关 >", this);
     QPushButton *screenTimeoutButton = new QPushButton("息屏时间: 1分钟 >", this);
     QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
@@ -45,12 +47,10 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     stackedWidget->addWidget(mainPage); // 添加主界面到堆叠布局
 
     // 创建选择界面
-    QWidget *wifiHotspotPage = createBooleanSelectionPage("Wi-Fi 热点", wifiHotspotButton);
     QWidget *startupWifiPage = createBooleanSelectionPage("开机 Wi-Fi 设置", startupWifiButton);
     QWidget *screenTimeoutPage = createTimeoutSelectionPage(screenTimeoutButton);
     QWidget *resolutionSelectionPage = createResolutionSelectionPage(resolutionSelectionButton);
 
-    stackedWidget->addWidget(wifiHotspotPage);
     stackedWidget->addWidget(startupWifiPage);
     stackedWidget->addWidget(screenTimeoutPage);
     stackedWidget->addWidget(resolutionSelectionPage);
@@ -60,8 +60,8 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     setLayout(layout);
 
     // 连接按钮切换到对应页面
-    connect(wifiHotspotButton, &QPushButton::clicked, this, [=]()
-            { stackedWidget->setCurrentWidget(wifiHotspotPage); });
+
+    connect(wifiHotspotButton, &QPushButton::clicked, this, &SettingsPage::createWiFiHotspot);
     connect(startupWifiButton, &QPushButton::clicked, this, [=]()
             { stackedWidget->setCurrentWidget(startupWifiPage); });
     connect(screenTimeoutButton, &QPushButton::clicked, this, [=]()
@@ -264,5 +264,31 @@ void SettingsPage::slot_resolutionChanged(int index)
     default:
         // 默认或错误处理
         break;
+    }
+}
+
+void SettingsPage::createWiFiHotspot()
+{
+    if (isHotspotActive)
+    {
+        // 关闭热点
+        QProcess process;
+        QString command = "sudo nmcli device disconnect wlan0";
+        process.start(command);
+        process.waitForFinished();
+
+        wifiHotspotButton->setText("Wi-Fi 热点: 关 >");
+        isHotspotActive = false;
+    }
+    else
+    {
+        // 创建热点
+        QProcess process;
+        QString command = "sudo nmcli device wifi hotspot ssid Jetson password 12345678";
+        process.start(command);
+        process.waitForFinished();
+
+        wifiHotspotButton->setText("Wi-Fi 热点: 开 >");
+        isHotspotActive = true;
     }
 }

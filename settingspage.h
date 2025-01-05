@@ -29,10 +29,13 @@ signals:
 private slots:
     void returnToMain(); // 返回主界面的槽函数
     void slot_resolutionChanged(int index);
+    void createWiFiHotspot();
 
 private:
     Ui::SettingsPage *ui;
     QStackedWidget *stackedWidget;
+    QPushButton *wifiHotspotButton; // 定义为成员变量
+    bool isHotspotActive;           // 添加热点状态变量
 
     QWidget *createBooleanSelectionPage(const QString &title, QPushButton *mainButton);
     QWidget *createTimeoutSelectionPage(QPushButton *mainButton);
