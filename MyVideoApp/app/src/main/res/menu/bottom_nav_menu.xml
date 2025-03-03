@@ -5,7 +5,12 @@
         android:title="Main"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/nav_files"
+        android:title="Files"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/nav_settings"
         android:title="Settings"
         app:showAsAction="ifRoom" />
+
 </menu>

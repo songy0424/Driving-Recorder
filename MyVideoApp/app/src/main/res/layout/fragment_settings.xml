@@ -1,20 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="16dp">
+    android:layout_height="match_parent"
+    android:padding="16dp">
 
-        <Button
-            android:id="@+id/connectButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="连接热点" />
+    <!-- 连接设备按钮 -->
+    <Button
+        android:id="@+id/connectButton"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:text="连接设备"
+        android:textSize="22sp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/divider1"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="0dp"
+        android:background="#ccc"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/connectButton" />
+
+    <LinearLayout
+        android:id="@+id/setting1Layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/divider1">
+
+        <!-- 设置名称 -->
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="5"
+            android:gravity=""
+            android:text="图像分辨率"
+            android:textColor="#000"
+            android:textSize="18sp" />
+
+        <!-- 第一个 Spinner -->
+        <Spinner
+            android:id="@+id/spinnerResolution"
+            android:layout_width="20dp"
+            android:layout_height="50dp"
+            android:layout_weight="3"
+            android:textSize="18sp"
+            android:entries="@array/resolution_options" />
     </LinearLayout>
 
+    <View
+        android:id="@+id/divider2"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="0dp"
+        android:background="#ccc"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/setting1Layout" />
+    <!-- 第二组设置项：摄影间隔 -->
+    <LinearLayout
+        android:id="@+id/setting2Layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/divider2">
 
+        <!-- 设置名称 -->
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="5"
+            android:gravity=""
+            android:text="摄影间隔"
+            android:textColor="#000"
+            android:textSize="18sp" />
+
+        <!-- 第二个 Spinner -->
+        <Spinner
+            android:id="@+id/spinnerPhotoInterval"
+            android:layout_width="20dp"
+            android:layout_height="50dp"
+            android:layout_weight="3"
+            android:textSize="18sp"
+            android:entries="@array/photo_interval_options" />
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

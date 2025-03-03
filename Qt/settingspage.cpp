@@ -18,8 +18,8 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     QVBoxLayout *mainLayout = new QVBoxLayout(mainPage);
     wifiHotspotButton->setText("Wi-Fi 热点: 关 >");
     QPushButton *startupWifiButton = new QPushButton("开机 Wi-Fi 设置: 关 >", this);
-    QPushButton *screenTimeoutButton = new QPushButton("息屏时间: 1分钟 >", this);
-    QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
+    QPushButton *screenTimeoutButton = new QPushButton("息屏时间: 1分钟 >", this);              // 摄影间隔
+    QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this); // 图像分辨率
     wifiHotspotButton->setMinimumSize(100, 70);
     startupWifiButton->setMinimumSize(100, 70);
     screenTimeoutButton->setMinimumSize(100, 70);
@@ -132,28 +132,28 @@ QWidget *SettingsPage::createTimeoutSelectionPage(QPushButton *mainButton)
     QVBoxLayout *groupLayout = new QVBoxLayout(groupBox);
 
     QRadioButton *oneMinButton = new QRadioButton("1分钟", this);
+    QRadioButton *threeMinButton = new QRadioButton("3分钟", this);
     QRadioButton *fiveMinButton = new QRadioButton("5分钟", this);
     QRadioButton *tenMinButton = new QRadioButton("10分钟", this);
-    QRadioButton *thirtyMinButton = new QRadioButton("30分钟", this);
     oneMinButton->setChecked(true); // 默认选择“1分钟”
 
     groupLayout->addWidget(oneMinButton);
+    groupLayout->addWidget(threeMinButton);
     groupLayout->addWidget(fiveMinButton);
     groupLayout->addWidget(tenMinButton);
-    groupLayout->addWidget(thirtyMinButton);
     groupBox->setLayout(groupLayout);
 
     QPushButton *confirmButton = new QPushButton("确定", this);
 
     oneMinButton->setMinimumSize(100, 70);
+    threeMinButton->setMinimumSize(100, 70);
     fiveMinButton->setMinimumSize(100, 70);
     tenMinButton->setMinimumSize(100, 70);
-    thirtyMinButton->setMinimumSize(100, 70);
     confirmButton->setMinimumSize(100, 70);
     oneMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    threeMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
     fiveMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
     tenMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
-    thirtyMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
     confirmButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     layout->addWidget(groupBox);
@@ -168,6 +168,10 @@ QWidget *SettingsPage::createTimeoutSelectionPage(QPushButton *mainButton)
                 {
                     mainButton->setText("息屏时间: 1分钟 >");
                 }
+                else if (threeMinButton->isChecked())
+                {
+                    mainButton->setText("息屏时间: 3分钟 >");
+                }
                 else if (fiveMinButton->isChecked())
                 {
                     mainButton->setText("息屏时间: 5分钟 >");
@@ -175,10 +179,6 @@ QWidget *SettingsPage::createTimeoutSelectionPage(QPushButton *mainButton)
                 else if (tenMinButton->isChecked())
                 {
                     mainButton->setText("息屏时间: 10分钟 >");
-                }
-                else if (thirtyMinButton->isChecked())
-                {
-                    mainButton->setText("息屏时间: 30分钟 >");
                 }
                 stackedWidget->setCurrentIndex(0); // 返回主界面
             });

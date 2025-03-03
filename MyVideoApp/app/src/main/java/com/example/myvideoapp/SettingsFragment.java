@@ -16,7 +16,13 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.widget.Button;
 import android.widget.Toast;
-
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+import android.widget.AdapterView;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+import android.view.View;
+import android.view.Gravity;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -31,14 +37,55 @@ public class SettingsFragment extends Fragment {
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     private static final int CONNECTION_TIMEOUT =30 * 1000; // 30秒超时
     private boolean isConnected = false;
-
+    
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
-
+     
         Button connectButton = view.findViewById(R.id.connectButton);
         connectButton.setOnClickListener(v -> checkWriteSettingsPermission());
 
+        // 初始化第一个 Spinner
+        Spinner spinnerResolution = view.findViewById(R.id.spinnerResolution);
+        ArrayAdapter<CharSequence> adapterResolution = ArrayAdapter.createFromResource(
+                requireContext(), R.array.resolution_options, android.R.layout.simple_spinner_item);
+        adapterResolution.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerResolution.setAdapter(adapterResolution);
+
+        // 设置第一个 Spinner 的监听器
+        spinnerResolution.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selectedResolution = parent.getItemAtPosition(position).toString();
+                Toast.makeText(requireContext(), "选中的分辨率是: " + selectedResolution, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // 没有选择时的处理
+            }
+        });
+
+        // 初始化第二个 Spinner
+        Spinner spinnerPhotoInterval = view.findViewById(R.id.spinnerPhotoInterval);
+        ArrayAdapter<CharSequence> adapterPhotoInterval = ArrayAdapter.createFromResource(
+                requireContext(), R.array.photo_interval_options, android.R.layout.simple_spinner_item);
+        adapterPhotoInterval.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerPhotoInterval.setAdapter(adapterPhotoInterval);
+
+        // 设置第二个 Spinner 的监听器
+        spinnerPhotoInterval.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selectedInterval = parent.getItemAtPosition(position).toString();
+                Toast.makeText(requireContext(), "选中的摄影间隔是: " + selectedInterval, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // 没有选择时的处理
+            }
+        });
         return view;
     }
 
