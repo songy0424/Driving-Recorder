@@ -30,10 +30,6 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     screenTimeoutButton->setStyleSheet("QPushButton { font-size: 16px;}");
     resolutionSelectionButton->setStyleSheet("QPushButton { font-size: 16px;}");
     ui->returnButton->setStyleSheet("QPushButton { font-size: 16px;}");
-    // 夜间模式、时间水印、关于设备
-    //  QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
-    //  QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
-    //  QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
 
     // 将按钮添加到主界面布局
     mainLayout->addWidget(wifiHotspotButton);
@@ -69,6 +65,13 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     connect(resolutionSelectionButton, &QPushButton::clicked, this, [=]()
             { stackedWidget->setCurrentWidget(resolutionSelectionPage); });
     connect(ui->returnButton, &QPushButton::clicked, this, &SettingsPage::returnToMain);
+
+    // 初始化TCP服务器
+    tcpServer = new QTcpServer(this);
+    if (tcpServer->listen(QHostAddress::Any, 8080))
+    {
+        connect(tcpServer, &QTcpServer::newConnection, this, &SettingsPage::newConnection);
+    }
 }
 
 QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushButton *mainButton)
@@ -291,4 +294,31 @@ void SettingsPage::createWiFiHotspot()
         wifiHotspotButton->setText("Wi-Fi 热点: 开 >");
         isHotspotActive = true;
     }
+}
+
+void SettingsPage::newConnection()
+{
+    clientSocket = tcpServer->nextPendingConnection();
+    connect(clientSocket, &QTcpSocket::readyRead, this, &SettingsPage::readData);
+}
+
+void SettingsPage::readData()
+{
+    QString data = clientSocket->readAll();
+    if (data.startsWith("SET_RESOLUTION"))
+    {
+        if (data.contains("720"))
+        {
+            slot_resolutionChanged(0); // 触发720p
+        }
+        else if (data.contains("1080"))
+        {
+            slot_resolutionChanged(1); // 触发1080p
+        }
+    }
+    else if (data == "TOGGLE_HOTSPOT")
+    {
+        createWiFiHotspot();
+    }
+    clientSocket->close();
 }

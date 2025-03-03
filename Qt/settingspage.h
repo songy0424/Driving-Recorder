@@ -9,6 +9,8 @@
 #include <QRadioButton>
 #include <QGroupBox>
 #include <QSpacerItem>
+#include <QTcpServer>
+#include <QTcpSocket>
 
 namespace Ui
 {
@@ -30,6 +32,8 @@ private slots:
     void returnToMain(); // 返回主界面的槽函数
     void slot_resolutionChanged(int index);
     void createWiFiHotspot();
+    void newConnection();
+    void readData();
 
 private:
     Ui::SettingsPage *ui;
@@ -40,6 +44,8 @@ private:
     QWidget *createBooleanSelectionPage(const QString &title, QPushButton *mainButton);
     QWidget *createTimeoutSelectionPage(QPushButton *mainButton);
     QWidget *createResolutionSelectionPage(QPushButton *mainButton);
+    QTcpServer *tcpServer;
+    QTcpSocket *clientSocket;
 };
 
 #endif // SETTINGSPAGE_H
