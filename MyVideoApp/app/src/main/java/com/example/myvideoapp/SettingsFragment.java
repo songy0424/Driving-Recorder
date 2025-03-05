@@ -8,8 +8,11 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
+import android.net.StaticIpConfiguration;
+import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiNetworkSpecifier;
+import android.net.wifi.WifiNetworkSuggestion;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -32,12 +35,37 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.net.Socket;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.LinkAddress;
+import android.net.LinkProperties;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
+import android.net.wifi.WifiManager;
+import android.net.wifi.WifiNetworkSpecifier;
+import android.os.Build;
+import android.os.Handler;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+
 public class SettingsFragment extends Fragment {
 
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     private static final int CONNECTION_TIMEOUT =30 * 1000; // 30秒超时
     private boolean isConnected = false;
-    
+    private Socket clientSocket;
+    private PrintWriter out;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
@@ -56,13 +84,13 @@ public class SettingsFragment extends Fragment {
         spinnerResolution.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String selectedResolution = parent.getItemAtPosition(position).toString();
-                Toast.makeText(requireContext(), "选中的分辨率是: " + selectedResolution, Toast.LENGTH_SHORT).show();
+                String command = "resolution:" + parent.getItemAtPosition(position);
+                sendCommandToQt(command);
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                // 没有选择时的处理
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
             }
         });
 
@@ -88,7 +116,21 @@ public class SettingsFragment extends Fragment {
         });
         return view;
     }
-
+    
+    private void sendCommandToQt(String command) {
+        new Thread(() -> {
+            try {
+                if (clientSocket == null || clientSocket.isClosed()) {
+                    clientSocket = new Socket("192.168.1.1", 12345); // Qt设备IP
+                    out = new PrintWriter(clientSocket.getOutputStream(), true);
+                }
+                out.println(command);
+            } catch (IOException e) {
+                requireActivity().runOnUiThread(() ->
+                        Toast.makeText(requireContext(), "连接失败", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
     private void checkWriteSettingsPermission() {
         if (!Settings.System.canWrite(requireContext())) {
             Toast.makeText(requireContext(), "需要授予修改系统设置权限", Toast.LENGTH_SHORT).show();
@@ -102,11 +144,11 @@ public class SettingsFragment extends Fragment {
 
     private void checkPermissions() {
         String[] permissions = {
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.CHANGE_WIFI_STATE,
-                Manifest.permission.CHANGE_NETWORK_STATE
-        };
-
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.CHANGE_WIFI_STATE,
+                    Manifest.permission.CHANGE_NETWORK_STATE
+            };
+        
         boolean allGranted = true;
         for (String permission : permissions) {
             if (ContextCompat.checkSelfPermission(requireContext(), permission) != PackageManager.PERMISSION_GRANTED) {
@@ -157,54 +199,85 @@ public class SettingsFragment extends Fragment {
     }
 
     private void connectToHotspot() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) requireContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (connectivityManager == null) {
-            Toast.makeText(requireContext(), "无法获取 ConnectivityManager", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        // Check if the device is running Android 10 (API 29) or higher
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Step 1: Create a WiFi network suggestion
+            String ssid = "Jetson"; // 替换为目标 Wi-Fi 的 SSID
+            String pwd = "12345678"; // 替换为目标 Wi-Fi 的密码
 
-        WifiNetworkSpecifier wifiNetworkSpecifier = new WifiNetworkSpecifier.Builder()
-                .setSsid("Jetson") // 替换为目标 Wi-Fi 的 SSID
-                .setWpa2Passphrase("12345678") // 替换为目标 Wi-Fi 的密码
-                .build();
+            WifiNetworkSuggestion suggestion = new WifiNetworkSuggestion.Builder()
+                    .setSsid(ssid)
+                    .setWpa2Passphrase(pwd)
+                    .setIsAppInteractionRequired(true) // 需要用户确认连接
+                    .build();
 
-        NetworkRequest networkRequest = new NetworkRequest.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .setNetworkSpecifier(wifiNetworkSpecifier)
-                .build();
+            List<WifiNetworkSuggestion> suggestionsList = new ArrayList<>();
+            suggestionsList.add(suggestion);
 
-        Handler timeoutHandler = new Handler();
-        timeoutHandler.postDelayed(() -> {
-            if (!isConnected) {
-                Toast.makeText(requireContext(), "连接超时，请稍后重试", Toast.LENGTH_SHORT).show();
-            }
-        }, CONNECTION_TIMEOUT);
-
-        connectivityManager.requestNetwork(networkRequest, new ConnectivityManager.NetworkCallback() {
-            @Override
-            public void onAvailable(@NonNull Network network) {
-                super.onAvailable(network);
-                connectivityManager.bindProcessToNetwork(network);
-                isConnected = true;
-                timeoutHandler.removeCallbacksAndMessages(null); // 取消超时回调
-                Toast.makeText(requireContext(), "已连接到热点", Toast.LENGTH_SHORT).show();
+            WifiManager wifiManager = (WifiManager) requireContext().getSystemService(Context.WIFI_SERVICE);
+            if (wifiManager == null) {
+                Toast.makeText(requireContext(), "无法获取 WifiManager", Toast.LENGTH_SHORT).show();
+                return;
             }
 
-            @Override
-            public void onUnavailable() {
-                super.onUnavailable();
-                if (!isConnected) {
-                    timeoutHandler.removeCallbacksAndMessages(null);
-                    Toast.makeText(requireContext(), "热点连接失败", Toast.LENGTH_SHORT).show();
+            // Add the network suggestion to the system
+            int status = wifiManager.addNetworkSuggestions(suggestionsList);
+            if (status == WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS) {
+                // Step 2: Create a NetworkSpecifier based on the suggestion
+                WifiNetworkSpecifier wifiNetworkSpecifier = new WifiNetworkSpecifier.Builder()
+                        .setSsid(ssid)
+                        .setWpa2Passphrase(pwd)
+                        .build();
+
+                // Create a NetworkRequest
+                NetworkRequest networkRequest = new NetworkRequest.Builder()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                        .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) // 不需要互联网
+                        .setNetworkSpecifier(wifiNetworkSpecifier)
+                        .build();
+
+                // Step 3: Request the network
+                ConnectivityManager connectivityManager = (ConnectivityManager) requireContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+                if (connectivityManager == null) {
+                    Toast.makeText(requireContext(), "无法获取 ConnectivityManager", Toast.LENGTH_SHORT).show();
+                    return;
                 }
-            }
 
-            @Override
-            public void onLost(@NonNull Network network) {
-                super.onLost(network);
-                isConnected = false;
-                Toast.makeText(requireContext(), "热点连接已断开", Toast.LENGTH_SHORT).show();
+                // Set up a timeout handler
+                final Handler timeoutHandler = new Handler();
+                timeoutHandler.postDelayed(() -> {
+                    Toast.makeText(requireContext(), "连接超时，请稍后重试", Toast.LENGTH_SHORT).show();
+                }, CONNECTION_TIMEOUT);
+
+                // Register the network callback
+                connectivityManager.requestNetwork(networkRequest, new ConnectivityManager.NetworkCallback() {
+                    @Override
+                    public void onAvailable(@NonNull Network network) {
+                        super.onAvailable(network);
+                        // Bind the process to the network
+                        connectivityManager.bindProcessToNetwork(network);
+                        timeoutHandler.removeCallbacksAndMessages(null); // 取消超时回调
+                        Toast.makeText(requireContext(), "已连接到热点", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onUnavailable() {
+                        super.onUnavailable();
+                        timeoutHandler.removeCallbacksAndMessages(null);
+                        Toast.makeText(requireContext(), "热点连接失败", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onLost(@NonNull Network network) {
+                        super.onLost(network);
+                        Toast.makeText(requireContext(), "热点连接已断开", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } else {
+                Toast.makeText(requireContext(), "添加网络建议失败", Toast.LENGTH_SHORT).show();
             }
-        });
+        } else {
+            Toast.makeText(requireContext(), "当前设备不支持 Android 10 或更高版本", Toast.LENGTH_SHORT).show();
+        }
     }
 }

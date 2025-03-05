@@ -18,8 +18,8 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     QVBoxLayout *mainLayout = new QVBoxLayout(mainPage);
     wifiHotspotButton->setText("Wi-Fi 热点: 关 >");
     QPushButton *startupWifiButton = new QPushButton("开机 Wi-Fi 设置: 关 >", this);
-    QPushButton *screenTimeoutButton = new QPushButton("息屏时间: 1分钟 >", this);              // 摄影间隔
-    QPushButton *resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this); // 图像分辨率
+    QPushButton *screenTimeoutButton = new QPushButton("息屏时间: 1分钟 >", this); // 摄影间隔
+    resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
     wifiHotspotButton->setMinimumSize(100, 70);
     startupWifiButton->setMinimumSize(100, 70);
     screenTimeoutButton->setMinimumSize(100, 70);
@@ -45,7 +45,7 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     // 创建选择界面
     QWidget *startupWifiPage = createBooleanSelectionPage("开机 Wi-Fi 设置", startupWifiButton);
     QWidget *screenTimeoutPage = createTimeoutSelectionPage(screenTimeoutButton);
-    QWidget *resolutionSelectionPage = createResolutionSelectionPage(resolutionSelectionButton);
+    QWidget *resolutionSelectionPage = createResolutionSelectionPage();
 
     stackedWidget->addWidget(startupWifiPage);
     stackedWidget->addWidget(screenTimeoutPage);
@@ -66,11 +66,49 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
             { stackedWidget->setCurrentWidget(resolutionSelectionPage); });
     connect(ui->returnButton, &QPushButton::clicked, this, &SettingsPage::returnToMain);
 
-    // 初始化TCP服务器
     tcpServer = new QTcpServer(this);
-    if (tcpServer->listen(QHostAddress::Any, 8080))
+    if (!tcpServer->listen(QHostAddress::Any, 12345))
     {
+        qDebug() << "Server could not start";
+    }
+    else
+    {
+        qDebug() << "Server start Success";
         connect(tcpServer, &QTcpServer::newConnection, this, &SettingsPage::newConnection);
+    }
+}
+
+void SettingsPage::newConnection()
+{
+    clientSocket = tcpServer->nextPendingConnection();
+    connect(clientSocket, &QTcpSocket::readyRead, this, &SettingsPage::readData);
+}
+
+void SettingsPage::readData()
+{
+    QString data = QString(clientSocket->readAll());
+    qDebug() << "Received:" << data;
+
+    // 解析指令
+    if (data.startsWith("resolution:"))
+    {
+        QString res = data.split(":")[1];
+        qDebug() << "res:" << res;
+        if (res == "1280p\n")
+        {
+            // 更新主界面按钮文字
+            resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
+            slot_resolutionChanged(0);
+        }
+        else if (res == "1920p")
+        {
+            resolutionSelectionButton->setText("分辨率: 1920x1080 30FPS >");
+            slot_resolutionChanged(1);
+        }
+    }
+    else if (data.startsWith("timeout:"))
+    {
+        // 类似处理其他指令
     }
 }
 
@@ -186,7 +224,7 @@ QWidget *SettingsPage::createTimeoutSelectionPage(QPushButton *mainButton)
     return page;
 }
 
-QWidget *SettingsPage::createResolutionSelectionPage(QPushButton *mainButton)
+QWidget *SettingsPage::createResolutionSelectionPage()
 {
     QWidget *page = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(page);
@@ -228,9 +266,9 @@ QWidget *SettingsPage::createResolutionSelectionPage(QPushButton *mainButton)
 
         // 更新主界面按钮文字
         if (selectedResolution == 0) {
-            mainButton->setText("分辨率: 1280x720 30FPS >");
+            resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
         } else if (selectedResolution == 1) {
-            mainButton->setText("分辨率: 1920x1080 30FPS >");
+            resolutionSelectionButton->setText("分辨率: 1920x1080 30FPS >");
         }
 
         // 发射分辨率变更信号
@@ -287,38 +325,23 @@ void SettingsPage::createWiFiHotspot()
     {
         // 创建热点
         QProcess process;
-        QString command = "sudo nmcli device wifi hotspot ssid Jetson password 12345678";
-        process.start(command);
+        QString command1 = "sudo nmcli device wifi hotspot con-name my-hostapt ssid Jetson password 12345678";
+        QString command2 = "sudo nmcli connection modify my-hostapt ipv4.addresses 192.168.1.1/24 ipv4.method manual";
+        QString command3 = "sudo nmcli connection down my-hostapt";
+        QString command4 = "sudo nmcli connection up my-hostapt";
+        QString command5 = "sudo systemctl restart dnsmasq";
+        process.start(command1);
+        process.waitForFinished();
+        process.start(command2);
+        process.waitForFinished();
+        process.start(command3);
+        process.waitForFinished();
+        process.start(command4);
+        process.waitForFinished();
+        process.start(command5);
         process.waitForFinished();
 
         wifiHotspotButton->setText("Wi-Fi 热点: 开 >");
         isHotspotActive = true;
     }
-}
-
-void SettingsPage::newConnection()
-{
-    clientSocket = tcpServer->nextPendingConnection();
-    connect(clientSocket, &QTcpSocket::readyRead, this, &SettingsPage::readData);
-}
-
-void SettingsPage::readData()
-{
-    QString data = clientSocket->readAll();
-    if (data.startsWith("SET_RESOLUTION"))
-    {
-        if (data.contains("720"))
-        {
-            slot_resolutionChanged(0); // 触发720p
-        }
-        else if (data.contains("1080"))
-        {
-            slot_resolutionChanged(1); // 触发1080p
-        }
-    }
-    else if (data == "TOGGLE_HOTSPOT")
-    {
-        createWiFiHotspot();
-    }
-    clientSocket->close();
 }

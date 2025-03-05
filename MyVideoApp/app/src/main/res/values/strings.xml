@@ -3,8 +3,8 @@
 
     <!-- 图像分辨率选项 -->
     <string-array name="resolution_options">
+        <item>1280p</item>
         <item>1920p</item>
-        <item>1080p</item>
     </string-array>
 
     <!-- 摄影间隔选项 -->

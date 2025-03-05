@@ -19,6 +19,7 @@ namespace Ui
 class SettingsPage : public QWidget
 {
     Q_OBJECT
+    QPushButton *resolutionSelectionButton;
 
 public:
     explicit SettingsPage(QWidget *parent = nullptr);
@@ -43,7 +44,7 @@ private:
 
     QWidget *createBooleanSelectionPage(const QString &title, QPushButton *mainButton);
     QWidget *createTimeoutSelectionPage(QPushButton *mainButton);
-    QWidget *createResolutionSelectionPage(QPushButton *mainButton);
+    QWidget *createResolutionSelectionPage();
     QTcpServer *tcpServer;
     QTcpSocket *clientSocket;
 };

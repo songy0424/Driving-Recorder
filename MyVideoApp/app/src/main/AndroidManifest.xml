@@ -1,16 +1,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="CoarseFineLocation">
 
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
-        tools:ignore="CoarseFineLocation" />
+    <uses-permission android:required="true"
+        android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:required="true"
+        android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <uses-permission android:required="true"
+        android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:required="true"
+        android:name="android.permission.INTERNET"/>
+    <uses-permission android:required="true"
+        android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS"
         tools:ignore="ProtectedPermissions" />
+
+    <!-- 适配 Android 13 及以上版本 -->
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        tools:targetApi="33" />
 
     <application
         android:allowBackup="true"
