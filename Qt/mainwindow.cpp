@@ -24,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     settingsPage = new SettingsPage(this);                                                 // 创建设置页面实例
     connect(settingsPage, &SettingsPage::returnToMainWindow, this, &MainWindow::showMain); // 连接信号和槽
     connect(settingsPage, &SettingsPage::resolutionChanged, this, &MainWindow::updateResolution);
-
+    connect(settingsPage, &SettingsPage::photoIntervalChanged, this, &MainWindow::updatePhotoInterval);
     connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showSettings); // 连接信号和槽
     connect(ui->snapshotButton, &QPushButton::clicked, this, &MainWindow::slot_Photograph);
     connect(ui->recordButton, &QPushButton::clicked, this, &MainWindow::slot_RecordVideo);
@@ -253,4 +253,11 @@ void MainWindow::addTimestamp(cv::Mat &frame)
 {
     std::string timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss").toStdString();
     cv::putText(frame, timestamp, cv::Point(frame.cols - 385, 50), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(255, 255, 255), 2);
+}
+
+void MainWindow::updatePhotoInterval(int interval)
+{
+    // 更新定时器时间
+    videoTimer->start(interval * 1000); // 将分钟转换为毫秒
+    qDebug("摄影间隔时间修改为 %d 分钟", interval / 60);
 }

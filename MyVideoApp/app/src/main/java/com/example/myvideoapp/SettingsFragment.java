@@ -87,10 +87,8 @@ public class SettingsFragment extends Fragment {
                 String command = "resolution:" + parent.getItemAtPosition(position);
                 sendCommandToQt(command);
             }
-
             @Override
             public void onNothingSelected(AdapterView<?> adapterView) {
-
             }
         });
 
@@ -105,13 +103,10 @@ public class SettingsFragment extends Fragment {
         spinnerPhotoInterval.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String selectedInterval = parent.getItemAtPosition(position).toString();
-                Toast.makeText(requireContext(), "选中的摄影间隔是: " + selectedInterval, Toast.LENGTH_SHORT).show();
-            }
-
+                String command = "interval:" + parent.getItemAtPosition(position);
+                sendCommandToQt(command);            }
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                // 没有选择时的处理
             }
         });
         return view;

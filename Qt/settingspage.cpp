@@ -18,23 +18,23 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     QVBoxLayout *mainLayout = new QVBoxLayout(mainPage);
     wifiHotspotButton->setText("Wi-Fi 热点: 关 >");
     QPushButton *startupWifiButton = new QPushButton("开机 Wi-Fi 设置: 关 >", this);
-    QPushButton *screenTimeoutButton = new QPushButton("息屏时间: 1分钟 >", this); // 摄影间隔
+    photoIntervalButton = new QPushButton("摄影间隔时间: 1分钟 >", this); // 摄影间隔
     resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
     wifiHotspotButton->setMinimumSize(100, 70);
     startupWifiButton->setMinimumSize(100, 70);
-    screenTimeoutButton->setMinimumSize(100, 70);
+    photoIntervalButton->setMinimumSize(100, 70);
     resolutionSelectionButton->setMinimumSize(100, 70);
     ui->returnButton->setMinimumSize(100, 70);
     wifiHotspotButton->setStyleSheet("QPushButton { font-size: 16px;}");
     startupWifiButton->setStyleSheet("QPushButton { font-size: 16px;}");
-    screenTimeoutButton->setStyleSheet("QPushButton { font-size: 16px;}");
+    photoIntervalButton->setStyleSheet("QPushButton { font-size: 16px;}");
     resolutionSelectionButton->setStyleSheet("QPushButton { font-size: 16px;}");
     ui->returnButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     // 将按钮添加到主界面布局
     mainLayout->addWidget(wifiHotspotButton);
     mainLayout->addWidget(startupWifiButton);
-    mainLayout->addWidget(screenTimeoutButton);
+    mainLayout->addWidget(photoIntervalButton);
     mainLayout->addWidget(resolutionSelectionButton);
     mainLayout->addWidget(ui->returnButton);
     mainLayout->addStretch(); // 添加弹性空间，避免按钮堆积
@@ -44,11 +44,11 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
 
     // 创建选择界面
     QWidget *startupWifiPage = createBooleanSelectionPage("开机 Wi-Fi 设置", startupWifiButton);
-    QWidget *screenTimeoutPage = createTimeoutSelectionPage(screenTimeoutButton);
+    QWidget *photoIntervalPage = createTimeoutSelectionPage();
     QWidget *resolutionSelectionPage = createResolutionSelectionPage();
 
     stackedWidget->addWidget(startupWifiPage);
-    stackedWidget->addWidget(screenTimeoutPage);
+    stackedWidget->addWidget(photoIntervalPage);
     stackedWidget->addWidget(resolutionSelectionPage);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -60,8 +60,8 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     connect(wifiHotspotButton, &QPushButton::clicked, this, &SettingsPage::createWiFiHotspot);
     connect(startupWifiButton, &QPushButton::clicked, this, [=]()
             { stackedWidget->setCurrentWidget(startupWifiPage); });
-    connect(screenTimeoutButton, &QPushButton::clicked, this, [=]()
-            { stackedWidget->setCurrentWidget(screenTimeoutPage); });
+    connect(photoIntervalButton, &QPushButton::clicked, this, [=]()
+            { stackedWidget->setCurrentWidget(photoIntervalPage); });
     connect(resolutionSelectionButton, &QPushButton::clicked, this, [=]()
             { stackedWidget->setCurrentWidget(resolutionSelectionPage); });
     connect(ui->returnButton, &QPushButton::clicked, this, &SettingsPage::returnToMain);
@@ -106,9 +106,33 @@ void SettingsPage::readData()
             slot_resolutionChanged(1);
         }
     }
-    else if (data.startsWith("timeout:"))
+    else if (data.startsWith("interval:"))
     {
-        // 类似处理其他指令
+        QString res = data.split(":")[1];
+        qDebug() << "res:" << res;
+        static int interval = 60; // 默认1分钟
+        if (res == "1分钟\n")
+        {
+            // 更新主界面按钮文字
+            photoIntervalButton->setText("摄影间隔时间: 1分钟 >");
+            interval = 60;
+        }
+        else if (res == "3分钟\n")
+        {
+            photoIntervalButton->setText("摄影间隔时间: 3分钟 >");
+            interval = 180;
+        }
+        else if (res == "5分钟\n")
+        {
+            photoIntervalButton->setText("摄影间隔时间: 5分钟 >");
+            interval = 300;
+        }
+        else if (res == "10分钟\n")
+        {
+            photoIntervalButton->setText("摄影间隔时间: 10分钟 >");
+            interval = 600; // 默认1分钟
+        }
+        emit photoIntervalChanged(interval);
     }
 }
 
@@ -161,12 +185,12 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
     return page;
 }
 
-QWidget *SettingsPage::createTimeoutSelectionPage(QPushButton *mainButton)
+QWidget *SettingsPage::createTimeoutSelectionPage()
 {
     QWidget *page = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(page);
 
-    QGroupBox *groupBox = new QGroupBox("选择息屏时间", this);
+    QGroupBox *groupBox = new QGroupBox("摄影间隔时间", this);
     QVBoxLayout *groupLayout = new QVBoxLayout(groupBox);
 
     QRadioButton *oneMinButton = new QRadioButton("1分钟", this);
@@ -202,24 +226,31 @@ QWidget *SettingsPage::createTimeoutSelectionPage(QPushButton *mainButton)
     // 点击确定返回主界面并更新状态
     connect(confirmButton, &QPushButton::clicked, this, [=]()
             {
+                int interval = 60; // 默认1分钟
                 if (oneMinButton->isChecked())
                 {
-                    mainButton->setText("息屏时间: 1分钟 >");
+                    photoIntervalButton->setText("摄影间隔时间: 1分钟 >");
+                    interval = 60;
                 }
                 else if (threeMinButton->isChecked())
                 {
-                    mainButton->setText("息屏时间: 3分钟 >");
+                    photoIntervalButton->setText("摄影间隔时间: 3分钟 >");
+                    interval = 180;
                 }
                 else if (fiveMinButton->isChecked())
                 {
-                    mainButton->setText("息屏时间: 5分钟 >");
+                    photoIntervalButton->setText("摄影间隔时间: 5分钟 >");
+                    interval = 300;
                 }
                 else if (tenMinButton->isChecked())
                 {
-                    mainButton->setText("息屏时间: 10分钟 >");
+                    photoIntervalButton->setText("摄影间隔时间: 10分钟 >");
+                    interval = 600;
                 }
                 stackedWidget->setCurrentIndex(0); // 返回主界面
-            });
+
+                // 发射摄影间隔更改信号
+                emit photoIntervalChanged(interval); });
 
     return page;
 }

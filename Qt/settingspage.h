@@ -20,6 +20,7 @@ class SettingsPage : public QWidget
 {
     Q_OBJECT
     QPushButton *resolutionSelectionButton;
+    QPushButton *photoIntervalButton;
 
 public:
     explicit SettingsPage(QWidget *parent = nullptr);
@@ -28,6 +29,7 @@ public:
 signals:
     void returnToMainWindow();
     void resolutionChanged(int width, int height, int frameRate); // 发出分辨率改变的信号
+    void photoIntervalChanged(int interval);                      // 发出摄影间隔改变的信号
 
 private slots:
     void returnToMain(); // 返回主界面的槽函数
@@ -43,7 +45,7 @@ private:
     bool isHotspotActive;           // 添加热点状态变量
 
     QWidget *createBooleanSelectionPage(const QString &title, QPushButton *mainButton);
-    QWidget *createTimeoutSelectionPage(QPushButton *mainButton);
+    QWidget *createTimeoutSelectionPage();
     QWidget *createResolutionSelectionPage();
     QTcpServer *tcpServer;
     QTcpSocket *clientSocket;

@@ -34,6 +34,7 @@ private slots:
     void showMain();     // 显示主窗口的槽函数
     void updateResolution(int width, int height, int frameRate);
     void addTimestamp(cv::Mat &frame);
+    void updatePhotoInterval(int interval);
 
 private:
     int width;     // 类的成员变量，用于宽度

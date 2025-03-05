@@ -26,16 +26,6 @@
     <string>PushButton</string>
    </property>
   </widget>
-  <widget class="QComboBox" name="resolutionComboBox">
-   <property name="geometry">
-    <rect>
-     <x>820</x>
-     <y>90</y>
-     <width>200</width>
-     <height>60</height>
-    </rect>
-   </property>
-  </widget>
  </widget>
  <resources/>
  <connections/>
