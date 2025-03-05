@@ -270,6 +270,14 @@ public class SettingsFragment extends Fragment {
                     @Override
                     public void onLost(@NonNull Network network) {
                         super.onLost(network);
+                        // 断开 Socket 连接
+                        if (clientSocket != null && !clientSocket.isClosed()) {
+                            try {
+                                clientSocket.close();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
                         Toast.makeText(requireContext(), "热点连接已断开", Toast.LENGTH_SHORT).show();
                     }
                 });

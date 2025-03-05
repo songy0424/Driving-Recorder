@@ -100,7 +100,7 @@ void SettingsPage::readData()
             resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
             slot_resolutionChanged(0);
         }
-        else if (res == "1920p")
+        else if (res == "1920p\n")
         {
             resolutionSelectionButton->setText("分辨率: 1920x1080 30FPS >");
             slot_resolutionChanged(1);
