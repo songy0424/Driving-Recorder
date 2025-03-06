@@ -5,7 +5,7 @@
 #include <QMessageBox>
 #include <QDateTime>
 #include <QPainter>
-
+#include <gst/app/gstappsrc.h>
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           ui(new Ui::MainWindow),
                                           camera(new Camera(this)),
@@ -14,9 +14,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           isRecordVideo(false),
                                           videoTimer(new QTimer(this)),
                                           timeTimer(new QTimer(this)),
-                                          width(1280),  // 默认分辨率宽度
-                                          height(720),  // 默认分辨率高度
-                                          frameRate(30) // 默认帧率
+                                          width(1280),   // 默认分辨率宽度
+                                          height(720),   // 默认分辨率高度
+                                          frameRate(30), // 默认帧率
+                                          rtspServer(nullptr),
+                                          factory(nullptr),
+                                          appsrc(nullptr)
 {
     ui->setupUi(this);
     ui->label->setStyleSheet("QLabel{background-color:rgb(255,0,0);}");
@@ -84,6 +87,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     ui->testButton->setIcon(settingIcon);
     ui->testButton->setIconSize(QSize(80, 80));
 
+    // 初始化 GStreamer
+    gst_init(nullptr, nullptr);
+    // 连接WiFi状态变化信号
+    connect(settingsPage, &SettingsPage::wifiStateChanged, this, &MainWindow::onWifiStateChanged);
     this->showFullScreen();
     connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽
     connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showNormal);
@@ -94,6 +101,19 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 MainWindow::~MainWindow()
 {
     camera->closeCamera();
+    if (appsrc)
+    {
+        gst_element_set_state(appsrc, GST_STATE_NULL);
+        gst_object_unref(appsrc);
+    }
+    if (factory)
+    {
+        g_object_unref(factory);
+    }
+    if (rtspServer)
+    {
+        g_object_unref(rtspServer);
+    }
     delete settingsPage; // 确保删除设置页面
     delete ui;
 }
@@ -121,6 +141,35 @@ void MainWindow::processFrame()
 
         // 对帧进行算法操作
         // performAlgorithmOnFrame(frame);
+        if (appsrc)
+        {
+            GstBuffer *buffer = gst_buffer_new_allocate(nullptr, frame.total() * frame.elemSize(), nullptr);
+
+            GstMapInfo map;
+            gst_buffer_map(buffer, &map, GST_MAP_WRITE);
+            memcpy(map.data, frame.data, map.size);
+            gst_buffer_unmap(buffer, &map);
+
+            // 设置时间戳（单位：纳秒）
+            GST_BUFFER_PTS(buffer) = gst_util_uint64_scale(frameCount, GST_SECOND, frameRate);
+            frameCount++;
+
+            // 推送缓冲区
+            GstFlowReturn ret;
+            g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
+            gst_buffer_unref(buffer);
+
+            if (ret != GST_FLOW_OK)
+            {
+                qDebug() << "Failed to push buffer to appsrc";
+            }
+            qDebug() << "Push buffer to appsrc Success";
+        }
+        else
+        {
+            qDebug() << "can not open src";
+        }
+
         QImage swappedImage = qImage.rgbSwapped(); // 原本帧是RGB格式，经过函数后编程BGR格式
 
         // 将处理后的帧显示在QLabel上
@@ -260,4 +309,105 @@ void MainWindow::updatePhotoInterval(int interval)
     // 更新定时器时间
     videoTimer->start(interval * 1000); // 将分钟转换为毫秒
     qDebug("摄影间隔时间修改为 %d 分钟", interval / 60);
+}
+void MainWindow::onWifiStateChanged(bool isActive, const QString &ipAddress)
+{
+    if (isActive)
+    {
+        // WiFi已开启，启动RTSP服务器
+        startRTSPServer(ipAddress);
+    }
+    else
+    {
+        // WiFi已关闭，停止RTSP服务器
+        stopRTSPServer();
+    }
+}
+
+void MainWindow::startRTSPServer(const QString &ipAddress)
+{
+
+    // 创建 RTSP 服务器
+    rtspServer = gst_rtsp_server_new();
+    g_object_set(rtspServer,
+                 "address", ipAddress.toStdString().c_str(),
+                 "service", "8554",
+                 nullptr);
+
+    // 创建媒体工厂
+    factory = gst_rtsp_media_factory_new();
+    const gchar *launch =
+        "appsrc name=mysrc is-live=true format=time ! "
+        "videoconvert ! x264enc tune=zerolatency ! "
+        "rtph264pay config-interval=1 name=pay0 pt=96";
+
+    // 关键修改：通过媒体对象获取管道
+    gst_rtsp_media_factory_set_launch(factory, launch);
+    gst_rtsp_media_factory_set_shared(factory, TRUE);
+
+    // 创建媒体对象并获取管道
+    GstRTSPMedia *media = gst_rtsp_media_factory_create(factory, nullptr);
+    if (!media)
+    {
+        qDebug() << "Failed to create media object";
+        return;
+    }
+
+    // 从媒体对象获取管道
+    GstElement *pipeline = gst_rtsp_media_get_element(media);
+    if (!pipeline)
+    {
+        qDebug() << "Failed to get pipeline from media";
+        gst_object_unref(media);
+        return;
+    }
+
+    // 获取 appsrc 元素
+    // appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "mysrc");
+    // if (!appsrc)
+    // {
+    //     qDebug() << "Failed to find appsrc in pipeline";
+    // }
+    // else
+    // {
+    //     // 设置必要属性
+    //     g_object_set(appsrc,
+    //                  "stream-type", GST_APP_STREAM_TYPE_STREAM,
+    //                  "format", GST_FORMAT_TIME,
+    //                  nullptr);
+    // }
+
+    // 挂载到服务器
+    GstRTSPMountPoints *mounts = gst_rtsp_server_get_mount_points(rtspServer);
+    gst_rtsp_mount_points_add_factory(mounts, "/stream", factory);
+    g_object_unref(mounts);
+
+    // 启动服务
+    gst_rtsp_server_attach(rtspServer, nullptr);
+
+    // 清理临时对象
+    gst_object_unref(pipeline);
+    gst_object_unref(media);
+
+    qDebug() << "RTSP server initialized (GStreamer 1.14.5)";
+}
+
+void MainWindow::stopRTSPServer()
+{
+    if (appsrc)
+    {
+        gst_element_set_state(appsrc, GST_STATE_NULL);
+        gst_object_unref(appsrc);
+        appsrc = nullptr;
+    }
+    if (factory)
+    {
+        g_object_unref(factory);
+        factory = nullptr;
+    }
+    if (rtspServer)
+    {
+        g_object_unref(rtspServer);
+        rtspServer = nullptr;
+    }
 }

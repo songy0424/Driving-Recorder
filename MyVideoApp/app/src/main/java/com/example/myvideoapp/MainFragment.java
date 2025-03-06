@@ -22,7 +22,7 @@ public class MainFragment extends Fragment {
         playerView.setPlayer(player);
 
         // 设置 RTSP URL
-        String rtspUrl = "rtsp://192.168.1.100:554/stream";
+        String rtspUrl = "rtsp://192.168.1.1:8554/stream";
         MediaItem mediaItem = MediaItem.fromUri(rtspUrl);
         player.setMediaItem(mediaItem);
         player.prepare();

@@ -1,6 +1,9 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <gst/gst.h>
+#include <gst/rtsp-server/rtsp-media.h>
+#include <gst/rtsp-server/rtsp-server.h>
 #include <QMainWindow>
 #include "camera.h"
 #include <QLabel>
@@ -35,11 +38,13 @@ private slots:
     void updateResolution(int width, int height, int frameRate);
     void addTimestamp(cv::Mat &frame);
     void updatePhotoInterval(int interval);
+    void onWifiStateChanged(bool isActive, const QString &ipAddress);
 
 private:
-    int width;     // 类的成员变量，用于宽度
-    int height;    // 类的成员变量，用于高度
-    int frameRate; // 类的成员变量，用于帧率
+    int width;      // 类的成员变量，用于宽度
+    int height;     // 类的成员变量，用于高度
+    int frameRate;  // 类的成员变量，用于帧率
+    int frameCount; // 声明 frameCount 成员变量
     Ui::MainWindow *ui;
     Camera *camera;
     QLabel *imageLabel;       // 用于显示图片的QTimer
@@ -57,6 +62,13 @@ private:
     bool isRecordVideo;
     cv::VideoWriter videorecord;
     SettingsPage *settingsPage; // 设置页面的指针
+    GstElement *appsrc;
+    GstRTSPServer *rtspServer;
+    GstRTSPMediaFactory *factory;
+    void startRTSPServer(const QString &ipAddress);
+    void stopRTSPServer();
 };
+
+// ffmpeg -i rtsp://127.0.0.1:8554/test -vf "scale=640:480" -f null -
 
 #endif // MAINWINDOW_H

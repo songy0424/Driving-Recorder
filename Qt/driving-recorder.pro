@@ -14,7 +14,12 @@ TEMPLATE = app
 
 
 INCLUDEPATH += /usr/include/opencv2
+INCLUDEPATH += /usr/include/glib-2.0
+INCLUDEPATH += /usr/lib/aarch64-linux-gnu/glib-2.0/include
+INCLUDEPATH += /usr/include/gstreamer-1.0
+LIBS += -L/usr/lib/aarch64-linux-gnu/gstreamer-1.0
 LIBS += -L/usr/lib/aarch64-linux-gnu -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_imgcodecs -lopencv_videoio
+LIBS += -pthread -lgstrtspserver-1.0 -lgstbase-1.0 -lgstreamer-1.0 -lgobject-2.0 -lglib-2.0
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings

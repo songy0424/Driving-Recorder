@@ -374,5 +374,7 @@ void SettingsPage::createWiFiHotspot()
 
         wifiHotspotButton->setText("Wi-Fi 热点: 开 >");
         isHotspotActive = true;
+        // 获取WiFi接口的IP地址
+        emit wifiStateChanged(true, "192.168.137.100");
     }
 }
