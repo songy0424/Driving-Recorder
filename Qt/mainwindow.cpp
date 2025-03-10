@@ -5,7 +5,7 @@
 #include <QMessageBox>
 #include <QDateTime>
 #include <QPainter>
-#include <gst/app/gstappsrc.h>
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           ui(new Ui::MainWindow),
                                           camera(new Camera(this)),
@@ -137,10 +137,6 @@ void MainWindow::processFrame()
     if (camera->grabFrame(frame))
     {
         addTimestamp(frame);
-        QImage qImage(frame.data, frame.cols, frame.rows, static_cast<int>(frame.step), QImage::Format_RGB888);
-
-        // 对帧进行算法操作
-        // performAlgorithmOnFrame(frame);
         if (appsrc)
         {
             GstBuffer *buffer = gst_buffer_new_allocate(nullptr, frame.total() * frame.elemSize(), nullptr);
@@ -151,7 +147,9 @@ void MainWindow::processFrame()
             gst_buffer_unmap(buffer, &map);
 
             // 设置时间戳（单位：纳秒）
-            GST_BUFFER_PTS(buffer) = gst_util_uint64_scale(frameCount, GST_SECOND, frameRate);
+            GST_BUFFER_PTS(buffer) = gst_util_uint64_scale(frameCount, GST_SECOND, 15);
+            GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale(1, GST_SECOND, 15);
+
             frameCount++;
 
             // 推送缓冲区
@@ -163,13 +161,17 @@ void MainWindow::processFrame()
             {
                 qDebug() << "Failed to push buffer to appsrc";
             }
-            qDebug() << "Push buffer to appsrc Success";
+            // else
+            //     qDebug() << "Push buffer to appsrc Success";
         }
-        else
-        {
-            qDebug() << "can not open src";
-        }
+        // else
+        // {
+        //     qDebug() << "can not open src";
+        // }
 
+        QImage qImage(frame.data, frame.cols, frame.rows, static_cast<int>(frame.step), QImage::Format_RGB888);
+        // 对帧进行算法操作
+        // performAlgorithmOnFrame(frame);
         QImage swappedImage = qImage.rgbSwapped(); // 原本帧是RGB格式，经过函数后编程BGR格式
 
         // 将处理后的帧显示在QLabel上
@@ -338,58 +340,64 @@ void MainWindow::startRTSPServer(const QString &ipAddress)
     factory = gst_rtsp_media_factory_new();
     const gchar *launch =
         "appsrc name=mysrc is-live=true format=time ! "
-        "videoconvert ! x264enc tune=zerolatency ! "
-        "rtph264pay config-interval=1 name=pay0 pt=96";
+        "videoconvert ! nvvidconv ! "
+        "nvv4l2h264enc ! h264parse ! rtph264pay config-interval=1 name=pay0 pt=96";
 
     // 关键修改：通过媒体对象获取管道
     gst_rtsp_media_factory_set_launch(factory, launch);
     gst_rtsp_media_factory_set_shared(factory, TRUE);
 
-    // 创建媒体对象并获取管道
-    GstRTSPMedia *media = gst_rtsp_media_factory_create(factory, nullptr);
-    if (!media)
-    {
-        qDebug() << "Failed to create media object";
-        return;
-    }
-
-    // 从媒体对象获取管道
-    GstElement *pipeline = gst_rtsp_media_get_element(media);
-    if (!pipeline)
-    {
-        qDebug() << "Failed to get pipeline from media";
-        gst_object_unref(media);
-        return;
-    }
-
-    // 获取 appsrc 元素
-    // appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "mysrc");
-    // if (!appsrc)
-    // {
-    //     qDebug() << "Failed to find appsrc in pipeline";
-    // }
-    // else
-    // {
-    //     // 设置必要属性
-    //     g_object_set(appsrc,
-    //                  "stream-type", GST_APP_STREAM_TYPE_STREAM,
-    //                  "format", GST_FORMAT_TIME,
-    //                  nullptr);
-    // }
+    g_signal_connect(factory, "media-configure", G_CALLBACK(MainWindow::media_configure), this);
 
     // 挂载到服务器
     GstRTSPMountPoints *mounts = gst_rtsp_server_get_mount_points(rtspServer);
     gst_rtsp_mount_points_add_factory(mounts, "/stream", factory);
     g_object_unref(mounts);
-
     // 启动服务
-    gst_rtsp_server_attach(rtspServer, nullptr);
+    gst_rtsp_server_attach(rtspServer, NULL);
 
-    // 清理临时对象
-    gst_object_unref(pipeline);
-    gst_object_unref(media);
+    qDebug() << "RTSP server at rtsp://192.168.137.100:8554/stream\n";
+}
 
-    qDebug() << "RTSP server initialized (GStreamer 1.14.5)";
+void MainWindow::media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data)
+{
+    MainWindow *self = static_cast<MainWindow *>(user_data);
+    GstElement *element, *appsrc;
+    GstCaps *caps;
+
+    // 获取媒体元素
+    element = gst_rtsp_media_get_element(media);
+
+    // 查找 appsrc 元素
+    appsrc = gst_bin_get_by_name_recurse_up(GST_BIN(element), "mysrc");
+    if (!appsrc)
+    {
+        qDebug() << "Failed to find appsrc in media element";
+        gst_object_unref(element);
+        return;
+    }
+
+    // 设置 appsrc 属性
+    g_object_set(appsrc,
+                 "is-live", TRUE,
+                 "format", GST_FORMAT_TIME,
+                 nullptr);
+
+    // 设置视频能力
+    caps = gst_caps_new_simple("video/x-raw",
+                               "format", G_TYPE_STRING, "BGR",
+                               "width", G_TYPE_INT, self->width,
+                               "height", G_TYPE_INT, self->height,
+                               "framerate", GST_TYPE_FRACTION, 15, 1,
+                               nullptr);
+    g_object_set(appsrc, "caps", caps, nullptr);
+    gst_caps_unref(caps);
+
+    // 保存 appsrc 指针
+    self->appsrc = appsrc;
+
+    // 释放媒体元素引用
+    gst_object_unref(element);
 }
 
 void MainWindow::stopRTSPServer()

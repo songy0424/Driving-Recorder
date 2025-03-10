@@ -4,6 +4,8 @@
 #include <gst/gst.h>
 #include <gst/rtsp-server/rtsp-media.h>
 #include <gst/rtsp-server/rtsp-server.h>
+#include <gst/app/gstappsrc.h>
+#include <gst/app/app.h>
 #include <QMainWindow>
 #include "camera.h"
 #include <QLabel>
@@ -23,6 +25,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    static void media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data);
 
 private slots:
     void takeSnapshot(const QImage &qImage); // 拍照槽函数
@@ -70,5 +73,7 @@ private:
 };
 
 // ffmpeg -i rtsp://127.0.0.1:8554/test -vf "scale=640:480" -f null -
+// ./test-launch2 "( videotestsrc ! x264enc ! rtph264pay name=pay0 pt=96 )"
+// gcc test-launch.c -o test-launch2 $(pkg-config --cflags --libs gstreamer-rtsp-server-1.0 gstreamer-1.0)
 
 #endif // MAINWINDOW_H
