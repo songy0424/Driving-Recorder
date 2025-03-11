@@ -147,8 +147,8 @@ void MainWindow::processFrame()
             gst_buffer_unmap(buffer, &map);
 
             // 设置时间戳（单位：纳秒）
-            GST_BUFFER_PTS(buffer) = gst_util_uint64_scale(frameCount, GST_SECOND, 15);
-            GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale(1, GST_SECOND, 15);
+            GST_BUFFER_PTS(buffer) = gst_util_uint64_scale(frameCount, GST_SECOND, 30);
+            GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale(1, GST_SECOND, 30);
 
             frameCount++;
 
@@ -156,14 +156,10 @@ void MainWindow::processFrame()
             GstFlowReturn ret;
             g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
             gst_buffer_unref(buffer);
-
-            if (ret != GST_FLOW_OK)
-            {
-                qDebug() << "Failed to push buffer to appsrc";
-            }
-            // else
-            //     qDebug() << "Push buffer to appsrc Success";
         }
+        // else
+        //     qDebug() << "Push buffer to appsrc Success";
+        // }
         // else
         // {
         //     qDebug() << "can not open src";
@@ -355,8 +351,7 @@ void MainWindow::startRTSPServer(const QString &ipAddress)
     g_object_unref(mounts);
     // 启动服务
     gst_rtsp_server_attach(rtspServer, NULL);
-
-    qDebug() << "RTSP server at rtsp://192.168.137.100:8554/stream\n";
+    qDebug() << "RTSP server at rtsp://192.168.1.1:8554/stream\n";
 }
 
 void MainWindow::media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data)
@@ -382,13 +377,16 @@ void MainWindow::media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *med
                  "is-live", TRUE,
                  "format", GST_FORMAT_TIME,
                  nullptr);
-
+    g_object_set(appsrc,
+                 "max-latency", 1 * GST_MSECOND, // 最大延迟1毫秒
+                 "max-bytes", 0,                 // 禁用缓冲区大小限制
+                 nullptr);
     // 设置视频能力
     caps = gst_caps_new_simple("video/x-raw",
                                "format", G_TYPE_STRING, "BGR",
                                "width", G_TYPE_INT, self->width,
                                "height", G_TYPE_INT, self->height,
-                               "framerate", GST_TYPE_FRACTION, 15, 1,
+                               "framerate", GST_TYPE_FRACTION, 30, 1,
                                nullptr);
     g_object_set(appsrc, "caps", caps, nullptr);
     gst_caps_unref(caps);
@@ -418,4 +416,6 @@ void MainWindow::stopRTSPServer()
         g_object_unref(rtspServer);
         rtspServer = nullptr;
     }
+
+    qDebug() << "RTSP server stoped!\n";
 }
