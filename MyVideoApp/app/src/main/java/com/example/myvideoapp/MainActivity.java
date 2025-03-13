@@ -1,6 +1,10 @@
 package com.example.myvideoapp;
+import static androidx.core.content.ContentProviderCompat.requireContext;
+
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -20,7 +24,6 @@ public class MainActivity extends AppCompatActivity {
         // 初始化各 Fragment
         final SettingsFragment settingsFragment = new SettingsFragment();
         final MainFragment mainFragment = new MainFragment();
-        // 可以根据需要添加其他 Fragment
 
         // 默认加载第一个 Fragment
         if (savedInstanceState == null) {
@@ -32,42 +35,40 @@ public class MainActivity extends AppCompatActivity {
         // 底部导航栏切换
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
         bottomNavigationView.setOnItemSelectedListener(item -> {
-            Fragment targetFragment = null;
             int id = item.getItemId();
+            Fragment targetFragment = null;
 
             if (id == R.id.nav_main) {
-                loadFragment(mainFragment);
+                targetFragment = mainFragment;
             } else if (id == R.id.nav_settings) {
-                loadFragment(settingsFragment);
-            } else {
-                // Handle other cases
+                targetFragment = settingsFragment;
             }
+
             if (targetFragment != null) {
                 loadFragment(targetFragment);
-//                currentFragment = targetFragment;
+                return true;
             }
-            return true;
+            return false;
         });
     }
 
     /**
      * 加载 Fragment
      */
+    // 修改 MainActivity 的 loadFragment 方法
     private void loadFragment(Fragment fragment) {
-        FragmentTransaction transaction = getSupportFragmentManager()
-                .beginTransaction();
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         if (currentFragment != null) {
             transaction.hide(currentFragment);
         }
-        if (!fragment.isAdded()) {
-            transaction.add(R.id.nav_host_fragment, fragment, fragment.getClass().getName());
-        } else {
+        if (fragment.isAdded()) {
             transaction.show(fragment);
+        } else {
+            transaction.add(R.id.mainFragment, fragment, fragment.getClass().getName());
         }
         transaction.commit();
         currentFragment = fragment;
     }
-
     /**
      * 预加载 Fragment
      */
@@ -80,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        fragmentTransaction.add(R.id.nav_host_fragment, fragment, tag);
+        fragmentTransaction.add(R.id.mainFragment, fragment, tag);
         fragmentTransaction.commit();
     }
 }

@@ -48,4 +48,6 @@ dependencies {
     implementation("androidx.media3:media3-common:1.5.0")
     implementation("androidx.media3:media3-exoplayer-rtsp:1.5.0")
     implementation("com.google.android.exoplayer:exoplayer:2.18.1")
+    implementation ("androidx.lifecycle:lifecycle-viewmodel:2.5.1")
+    implementation( "androidx.lifecycle:lifecycle-livedata:2.5.1")
 }

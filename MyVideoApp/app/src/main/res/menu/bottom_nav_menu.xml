@@ -2,15 +2,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/nav_main"
-        android:title="Main"
+        android:title="主界面"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/nav_files"
-        android:title="Files"
+        android:title="文件"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/nav_settings"
-        android:title="Settings"
+        android:title="设置"
         app:showAsAction="ifRoom" />
 
 </menu>
