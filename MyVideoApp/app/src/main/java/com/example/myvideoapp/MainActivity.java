@@ -1,10 +1,10 @@
 package com.example.myvideoapp;
-import static androidx.core.content.ContentProviderCompat.requireContext;
+
+import static androidx.core.content.ContextCompat.getSystemService;
 
 import android.os.Bundle;
-import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -15,47 +15,59 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 public class MainActivity extends AppCompatActivity {
 
     private Fragment currentFragment = null;
+    private boolean isConnected = false;
+    private BottomNavigationView bottomNavigationView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // 初始化各 Fragment
-        final SettingsFragment settingsFragment = new SettingsFragment();
-        final MainFragment mainFragment = new MainFragment();
+        bottomNavigationView = findViewById(R.id.bottomNavigationView);
 
-        // 默认加载第一个 Fragment
-        if (savedInstanceState == null) {
-            loadFragment(mainFragment, mainFragment.getClass().getName());
-            // 设置当前 Fragment
-            currentFragment = mainFragment;
+        if (!isConnected) {
+            // 显示连接界面
+            ConnectFragment connectFragment = new ConnectFragment();
+            loadFragment(connectFragment, connectFragment.getClass().getName());
+            currentFragment = connectFragment;
+            bottomNavigationView.setVisibility(View.GONE); // 隐藏底部导航栏
+        } else {
+            // 初始化各 Fragment
+            final SettingsFragment settingsFragment = new SettingsFragment();
+            final MainFragment mainFragment = new MainFragment();
+            final LocalFilesFragment localFilesFragment = new LocalFilesFragment();
+
+            // 默认加载第二个 Fragment
+            if (savedInstanceState == null) {
+                loadFragment(mainFragment, mainFragment.getClass().getName());
+                currentFragment = mainFragment;
+            }
+            // 底部导航栏切换
+            bottomNavigationView.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                Fragment targetFragment = null;
+
+                if (id == R.id.nav_main) {
+                    targetFragment = mainFragment;
+                } else if (id == R.id.nav_local_files) {
+                    targetFragment = localFilesFragment;
+                } else if (id == R.id.nav_settings) {
+                    targetFragment = settingsFragment;
+                }
+
+                if (targetFragment != null) {
+                    loadFragment(targetFragment);
+                    return true;
+                }
+                return false;
+            });
+            bottomNavigationView.setVisibility(View.VISIBLE); // 显示底部导航栏
         }
-
-        // 底部导航栏切换
-        BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
-        bottomNavigationView.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-            Fragment targetFragment = null;
-
-            if (id == R.id.nav_main) {
-                targetFragment = mainFragment;
-            } else if (id == R.id.nav_settings) {
-                targetFragment = settingsFragment;
-            }
-
-            if (targetFragment != null) {
-                loadFragment(targetFragment);
-                return true;
-            }
-            return false;
-        });
     }
 
     /**
      * 加载 Fragment
      */
-    // 修改 MainActivity 的 loadFragment 方法
     private void loadFragment(Fragment fragment) {
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         if (currentFragment != null) {
@@ -69,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
         transaction.commit();
         currentFragment = fragment;
     }
+
     /**
      * 预加载 Fragment
      */
@@ -83,5 +96,51 @@ public class MainActivity extends AppCompatActivity {
 
         fragmentTransaction.add(R.id.mainFragment, fragment, tag);
         fragmentTransaction.commit();
+    }
+
+    public void setConnected(boolean connected) {
+        isConnected = connected;
+        if (connected) {
+            // 连接成功，切换到主界面
+            final SettingsFragment settingsFragment = new SettingsFragment();
+            final MainFragment mainFragment = new MainFragment();
+            final LocalFilesFragment localFilesFragment = new LocalFilesFragment();
+
+            // 移除 ConnectFragment
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            Fragment connectFragment = fragmentManager.findFragmentByTag(ConnectFragment.class.getName());
+            if (connectFragment != null) {
+                FragmentTransaction transaction = fragmentManager.beginTransaction();
+                transaction.remove(connectFragment);
+                transaction.commit();
+            }
+
+            // 由于下方添加选中主界面菜单项，需要把这两行注释掉，否则会闪退
+            // loadFragment(mainFragment, mainFragment.getClass().getName());
+            // currentFragment = mainFragment;
+
+            // 底部导航栏切换
+            bottomNavigationView.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                Fragment targetFragment = null;
+
+                if (id == R.id.nav_main) {
+                    targetFragment = mainFragment;
+                } else if (id == R.id.nav_local_files) {
+                    targetFragment = localFilesFragment;
+                } else if (id == R.id.nav_settings) {
+                    targetFragment = settingsFragment;
+                }
+
+                if (targetFragment != null) {
+                    loadFragment(targetFragment);
+                    return true;
+                }
+                return false;
+            });
+            bottomNavigationView.setVisibility(View.VISIBLE); // 显示底部导航栏
+
+            bottomNavigationView.setSelectedItemId(R.id.nav_main);//选中主界面菜单项
+        }
     }
 }

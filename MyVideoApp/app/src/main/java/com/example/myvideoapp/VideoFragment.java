@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -22,9 +23,6 @@ public class VideoFragment extends Fragment {
         PlayerView playerView = view.findViewById(R.id.fullscreen_player);
         player = new ExoPlayer.Builder(requireContext()).build();
         playerView.setPlayer(player);
-
-        Button backButton = view.findViewById(R.id.backButton);
-        backButton.setOnClickListener(v -> requireActivity().getSupportFragmentManager().popBackStack());
 
         return view;
     }

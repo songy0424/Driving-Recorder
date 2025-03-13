@@ -39,7 +39,7 @@ public class SettingsFragment extends Fragment {
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (isInitialized && mainFragment != null && mainFragment.isConnected()) {
+                if (isInitialized && mainFragment != null ) {
                     String command = "resolution:" + parent.getItemAtPosition(position);
                     mainFragment.sendCommandToQt(command);
                 } else {
@@ -63,7 +63,7 @@ public class SettingsFragment extends Fragment {
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (isInitialized && mainFragment != null && mainFragment.isConnected()) {
+                if (isInitialized && mainFragment != null ) {
                     String command = "interval:" + parent.getItemAtPosition(position);
                     mainFragment.sendCommandToQt(command);
                 } else {

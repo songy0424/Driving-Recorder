@@ -1,16 +1,15 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/nav_main"
-        android:title="主界面"
+        android:id="@+id/nav_local_files"
+        android:title="文件"
         app:showAsAction="ifRoom" />
     <item
-        android:id="@+id/nav_files"
-        android:title="文件"
+        android:id="@+id/nav_main"
+        android:title="主界面"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/nav_settings"
         android:title="设置"
         app:showAsAction="ifRoom" />
-
 </menu>
