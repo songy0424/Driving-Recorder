@@ -1,7 +1,5 @@
 package com.example.myvideoapp;
 
-import static androidx.core.content.ContextCompat.getSystemService;
-
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
@@ -17,6 +15,7 @@ public class MainActivity extends AppCompatActivity {
     private Fragment currentFragment = null;
     private boolean isConnected = false;
     private BottomNavigationView bottomNavigationView;
+    private MainFragment mainFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,11 +32,10 @@ public class MainActivity extends AppCompatActivity {
             bottomNavigationView.setVisibility(View.GONE); // 隐藏底部导航栏
         } else {
             // 初始化各 Fragment
+            mainFragment = new MainFragment();
             final SettingsFragment settingsFragment = new SettingsFragment();
-            final MainFragment mainFragment = new MainFragment();
             final LocalFilesFragment localFilesFragment = new LocalFilesFragment();
 
-            // 默认加载第二个 Fragment
             if (savedInstanceState == null) {
                 loadFragment(mainFragment, mainFragment.getClass().getName());
                 currentFragment = mainFragment;
@@ -102,8 +100,9 @@ public class MainActivity extends AppCompatActivity {
         isConnected = connected;
         if (connected) {
             // 连接成功，切换到主界面
+            mainFragment = new MainFragment();
+            mainFragment.setConnected(true);
             final SettingsFragment settingsFragment = new SettingsFragment();
-            final MainFragment mainFragment = new MainFragment();
             final LocalFilesFragment localFilesFragment = new LocalFilesFragment();
 
             // 移除 ConnectFragment
@@ -114,10 +113,6 @@ public class MainActivity extends AppCompatActivity {
                 transaction.remove(connectFragment);
                 transaction.commit();
             }
-
-            // 由于下方添加选中主界面菜单项，需要把这两行注释掉，否则会闪退
-            // loadFragment(mainFragment, mainFragment.getClass().getName());
-            // currentFragment = mainFragment;
 
             // 底部导航栏切换
             bottomNavigationView.setOnItemSelectedListener(item -> {
@@ -139,7 +134,6 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             });
             bottomNavigationView.setVisibility(View.VISIBLE); // 显示底部导航栏
-
             bottomNavigationView.setSelectedItemId(R.id.nav_main);//选中主界面菜单项
         }
     }

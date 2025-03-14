@@ -14,6 +14,8 @@ import android.net.wifi.WifiNetworkSuggestion;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,14 +33,37 @@ import java.util.List;
 
 public class ConnectFragment extends Fragment {
     private static final int MY_PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
-    private static final int CONNECTION_TIMEOUT = 30 * 1000;
+    private static final int CONNECTION_TIMEOUT = 20 * 1000; // 20s 超时时间
+    private static final int MSG_CONNECTION_TIMEOUT = 1;
+
+    private Handler mHandler;
+    private boolean isConnecting = false;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_connect, container, false);
 
+        mHandler = new Handler(Looper.getMainLooper()) {
+            @Override
+            public void handleMessage(@NonNull Message msg) {
+                if (msg.what == MSG_CONNECTION_TIMEOUT) {
+                    if (isConnecting) {
+                        isConnecting = false;
+                        Toast.makeText(requireContext(), "连接设备失败", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        };
+
         Button connectButton = view.findViewById(R.id.connectButton);
-        connectButton.setOnClickListener(v -> checkWriteSettingsPermission());
+        connectButton.setOnClickListener(v -> {
+            if (!isConnecting) {
+                isConnecting = true;
+                Toast.makeText(requireContext(), "正在连接设备", Toast.LENGTH_SHORT).show();
+                mHandler.sendEmptyMessageDelayed(MSG_CONNECTION_TIMEOUT, CONNECTION_TIMEOUT);
+                checkWriteSettingsPermission();
+            }
+        });
 
         return view;
     }
@@ -90,6 +115,8 @@ public class ConnectFragment extends Fragment {
             if (allGranted) {
                 enableWiFiAndConnect();
             } else {
+                isConnecting = false;
+                mHandler.removeMessages(MSG_CONNECTION_TIMEOUT);
                 Toast.makeText(requireContext(), "权限被拒绝，无法连接", Toast.LENGTH_SHORT).show();
             }
         }
@@ -103,6 +130,8 @@ public class ConnectFragment extends Fragment {
             // 跳转到 WiFi 设置页面
             Intent intent = new Intent(Settings.ACTION_WIFI_SETTINGS);
             startActivity(intent);
+            isConnecting = false;
+            mHandler.removeMessages(MSG_CONNECTION_TIMEOUT);
             return;
         }
         connectToHotspot();
@@ -135,6 +164,7 @@ public class ConnectFragment extends Fragment {
 
             NetworkRequest request = new NetworkRequest.Builder()
                     .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                    .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                     .setNetworkSpecifier(specifier)
                     .build();
 
@@ -143,21 +173,28 @@ public class ConnectFragment extends Fragment {
                 connectivityManager.requestNetwork(request, new ConnectivityManager.NetworkCallback() {
                     @Override
                     public void onAvailable(@NonNull Network network) {
-                        super.onAvailable(network);
                         requireActivity().runOnUiThread(() -> {
-                            Toast.makeText(requireContext(), "已连接到热点", Toast.LENGTH_SHORT).show();
-                            MainActivity mainActivity = (MainActivity) requireActivity();
-                            mainActivity.setConnected(true);
+                            if (isConnecting) {
+                                isConnecting = false;
+                                mHandler.removeMessages(MSG_CONNECTION_TIMEOUT);
+                                connectivityManager.bindProcessToNetwork(network);
+                                Toast.makeText(requireContext(), "连接设备成功", Toast.LENGTH_SHORT).show();
+                                MainActivity mainActivity = (MainActivity) requireActivity();
+                                mainActivity.setConnected(true);
+                            }
                         });
                     }
 
                     @Override
                     public void onLost(@NonNull Network network) {
-                        super.onLost(network);
                         requireActivity().runOnUiThread(() -> {
-                            Toast.makeText(requireContext(), "网络连接已丢失", Toast.LENGTH_SHORT).show();
-                            MainActivity mainActivity = (MainActivity) requireActivity();
-                            mainActivity.setConnected(false);
+                            if (isConnecting) {
+                                isConnecting = false;
+                                mHandler.removeMessages(MSG_CONNECTION_TIMEOUT);
+                                Toast.makeText(requireContext(), "网络连接已丢失", Toast.LENGTH_SHORT).show();
+                                MainActivity mainActivity = (MainActivity) requireActivity();
+                                mainActivity.setConnected(false);
+                            }
                         });
                     }
                 }, new Handler(), CONNECTION_TIMEOUT);

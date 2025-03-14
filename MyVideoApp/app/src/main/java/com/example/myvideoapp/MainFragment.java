@@ -5,7 +5,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -56,10 +55,21 @@ public class MainFragment extends Fragment {
             if (isAdded()) {
                 startVideoPlayback();
             }
+        } else {
+            if (player != null) {
+                player.stop();
+            }
+            if (clientSocket != null) {
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
-    private void setupSocketConnection() {
+    public void setupSocketConnection() {
         new Thread(() -> {
             try {
                 clientSocket = new Socket("192.168.1.1", 12345);
