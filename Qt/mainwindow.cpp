@@ -196,7 +196,8 @@ void MainWindow::displayFrameOnLabel(const QImage &qImage)
 
 void MainWindow::takeSnapshot(const QImage &qImage)
 {
-    QString directory = "/home/nvidia/my_project/new_camera";         // 固定保存地址
+    // QString directory = "/home/nvidia/my_project/new_camera";         // 固定保存地址
+    QString directory = "/mnt/myvideo/Picture";
     QDir().mkpath(directory);                                         // 确保目录存在
     QDateTime dateTime = QDateTime::currentDateTime();                // 使用QDateTime
     QString fileName = dateTime.toString("yyyyMMdd_HHmmss") + ".jpg"; // 文件名为当前时间，格式为 YYMMDD_HHmmss

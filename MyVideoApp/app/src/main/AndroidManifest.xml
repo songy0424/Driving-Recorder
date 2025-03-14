@@ -16,7 +16,10 @@
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS"
         tools:ignore="ProtectedPermissions" />
-
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
     <!-- 适配 Android 13 及以上版本 -->
     <uses-permission
         android:name="android.permission.NEARBY_WIFI_DEVICES"
