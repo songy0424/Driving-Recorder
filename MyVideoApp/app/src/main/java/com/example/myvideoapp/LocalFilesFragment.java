@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -33,21 +34,16 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.DataSource;
-import com.bumptech.glide.load.engine.GlideException;
-import com.bumptech.glide.request.RequestListener;
-import com.bumptech.glide.request.RequestOptions;
-import com.bumptech.glide.request.target.Target;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import jcifs.smb.SmbFile;
@@ -67,6 +63,7 @@ public class LocalFilesFragment extends Fragment {
     private FileType currentType = FileType.VIDEO;
     private View selectionActionBar;
     private TextView tvSelectedCount;
+    private Map<String, Bitmap> thumbnailCache = new HashMap<>();
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -74,7 +71,7 @@ public class LocalFilesFragment extends Fragment {
 
         initializeViews(view);
         setupAdapter();
-//        setupButtonListeners();
+        //        setupButtonListeners();
         loadFiles();
 
         return view;
@@ -172,6 +169,7 @@ public class LocalFilesFragment extends Fragment {
                 (currentType == FileType.VIDEO && isVideo) ||
                 (currentType == FileType.IMAGE && !isVideo);
     }
+
     private void enterSelectMode() {
         isSelectMode = true;
         selectionActionBar.setVisibility(View.VISIBLE);
@@ -183,6 +181,7 @@ public class LocalFilesFragment extends Fragment {
         selectionActionBar.setVisibility(View.GONE);
         updateSelectedCount();
     }
+
     private void handleFileClick(int position) {
         FileItem item = fileItems.get(position);
         if (item.isVideo) playVideo(item.path);
@@ -316,8 +315,8 @@ public class LocalFilesFragment extends Fragment {
     }
 
     private class FileAdapter extends BaseAdapter {
-        private  Context context;
-        private  List<FileItem> items;
+        private Context context;
+        private List<FileItem> items;
 
         FileAdapter(Context context, List<FileItem> items) {
             this.context = context;
@@ -359,8 +358,14 @@ public class LocalFilesFragment extends Fragment {
                     handleFileClick(position);
                 }
             });
-//            convertView.setOnLongClickListener(v -> enterSelectMode());
-
+            convertView.setOnLongClickListener(v -> {
+                if (!isSelectMode) {
+                    enterSelectMode();
+                    toggleSelection(position);
+                    return true;
+                }
+                return false;
+            });
             return convertView;
         }
 
@@ -375,6 +380,7 @@ public class LocalFilesFragment extends Fragment {
                 }
             }
         }
+
         private class ViewHolder {
             ImageView image, videoIcon;
             TextView name;
@@ -388,6 +394,8 @@ public class LocalFilesFragment extends Fragment {
             }
 
             void bind(FileItem item, boolean isSelectMode, boolean isSelected) {
+                // 在加载新图片之前清空旧的图片
+                image.setImageDrawable(null);
                 name.setText(item.name);
                 videoIcon.setVisibility(item.isVideo ? View.VISIBLE : View.GONE);
                 checkbox.setVisibility(isSelectMode ? View.VISIBLE : View.GONE);
@@ -396,11 +404,15 @@ public class LocalFilesFragment extends Fragment {
             }
 
             void loadThumbnail(FileItem item) {
-                try {
-                    if (item.isVideo) loadVideoThumbnail(item.path);
-                    else loadImageThumbnail(item.path);
-                } catch (Exception e) {
-                    Glide.with(context).load(R.drawable.ic_broken_image).into(image);
+                if (thumbnailCache.containsKey(item.path)) {
+                    image.setImageBitmap(thumbnailCache.get(item.path));
+                } else {
+                    try {
+                        if (item.isVideo) loadVideoThumbnail(item.path);
+                        else loadImageThumbnail(item.path);
+                    } catch (Exception e) {
+                        setErrorImage();
+                    }
                 }
             }
 
@@ -413,6 +425,7 @@ public class LocalFilesFragment extends Fragment {
                         copyStreamToFile(smbFile, temp);
                         retriever.setDataSource(temp.getPath());
                         Bitmap bitmap = retriever.getFrameAtTime();
+                        thumbnailCache.put(path, bitmap);
                         runOnUiThread(() -> image.setImageBitmap(bitmap));
                     } catch (Exception e) {
                         setErrorImage();
@@ -421,21 +434,23 @@ public class LocalFilesFragment extends Fragment {
             }
 
             void loadImageThumbnail(String path) {
-                try {
-                    Glide.with(context)
-                            .load(new SmbFileInputStream(new SmbFile(path)))
-                            .apply(new RequestOptions()
-                                    .placeholder(R.drawable.ic_broken_image)
-                                    .error(R.drawable.ic_broken_image))
-                            .into(image);
-                } catch (Exception e) {
-                    setErrorImage();
-                }
+                new Thread(() -> {
+                    try {
+                        SmbFile smbFile = new SmbFile(path);
+                        File temp = createTempFile("thumb", ".jpg");
+                        copyStreamToFile(smbFile, temp);
+                        Bitmap bitmap = BitmapFactory.decodeFile(temp.getAbsolutePath());
+                        thumbnailCache.put(path, bitmap);
+                        runOnUiThread(() -> image.setImageBitmap(bitmap));
+                    } catch (Exception e) {
+                        setErrorImage();
+                    }
+                }).start();
             }
 
             void setErrorImage() {
                 runOnUiThread(() ->
-                        Glide.with(context).load(R.drawable.ic_broken_image).into(image));
+                        image.setImageResource(R.drawable.ic_broken_image));
             }
         }
     }
