@@ -4,11 +4,14 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -33,6 +36,13 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.request.target.Target;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -64,6 +74,7 @@ public class LocalFilesFragment extends Fragment {
     private View selectionActionBar;
     private TextView tvSelectedCount;
     private Map<String, Bitmap> thumbnailCache = new HashMap<>();
+    private ProgressDialog progressDialog;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -292,21 +303,55 @@ public class LocalFilesFragment extends Fragment {
     }
 
     private void downloadSelectedFiles() {
+        progressDialog = new ProgressDialog(requireContext());
+        progressDialog.setMessage("正在下载...");
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progressDialog.setMax(selectedItems.size());
+        progressDialog.show();
+
         new Thread(() -> {
             int count = 0;
+            int currentFileIndex = 0;
             for (FileItem item : selectedItems) {
                 try {
                     SmbFile smbFile = new SmbFile(item.path);
                     File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                     File dest = new File(downloadDir, item.name);
-                    copySmbToLocal(smbFile, dest);
+                    downloadFileWithProgress(smbFile, dest, currentFileIndex);
                     count++;
                 } catch (Exception e) {
                     Log.e("Download", "下载失败: " + item.name, e);
                 }
+                final int finalCurrentFileIndex = currentFileIndex;
+                runOnUiThread(() -> progressDialog.setProgress(finalCurrentFileIndex + 1));
+                currentFileIndex++;
             }
-            showToast("成功下载 " + count + " 个文件");
+            final int finalCount = count;
+            runOnUiThread(() -> {
+                progressDialog.dismiss();
+                showToast("成功下载 " + finalCount + " 个文件");
+            });
         }).start();
+    }
+
+    private void downloadFileWithProgress(SmbFile smbFile, File localFile, int currentFileIndex) throws IOException {
+        long fileLength = smbFile.length();
+        try (InputStream in = new SmbFileInputStream(smbFile);
+             OutputStream out = new FileOutputStream(localFile)) {
+            byte[] buffer = new byte[4096];
+            int len;
+            long totalBytesRead = 0;
+            while ((len = in.read(buffer)) > 0) {
+                out.write(buffer, 0, len);
+                totalBytesRead += len;
+                int progress = (int) ((totalBytesRead * 100) / fileLength);
+                final int finalProgress = progress;
+                final int finalCurrentFileIndex = currentFileIndex;
+                runOnUiThread(() -> {
+                    progressDialog.setMessage("正在下载文件 " + (finalCurrentFileIndex + 1) + " / " + selectedItems.size() + "：" + finalProgress + "%");
+                });
+            }
+        }
     }
 
     private boolean hasStoragePermission() {
