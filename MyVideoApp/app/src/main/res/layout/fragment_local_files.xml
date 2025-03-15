@@ -4,29 +4,29 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="8dp">
 
+    <!-- 原有操作栏 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="right"
-        android:paddingBottom="16dp">
+        android:gravity="end"
+        android:paddingBottom="8dp">
 
         <Button
             android:id="@+id/select_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="选择"
-            android:layout_marginLeft="16dp"/>
-
+            android:text="选择" />
     </LinearLayout>
 
+    <!-- 文件类型筛选 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingBottom="16dp">
+        android:paddingBottom="8dp">
 
         <Button
             android:id="@+id/video_btn"
@@ -41,15 +41,48 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="图片"/>
-
     </LinearLayout>
 
+    <!-- 文件列表 -->
     <GridView
         android:id="@+id/file_grid_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:numColumns="3"
-        android:verticalSpacing="16dp"
-        android:horizontalSpacing="16dp"/>
+        android:verticalSpacing="8dp"
+        android:horizontalSpacing="8dp"
+        android:stretchMode="columnWidth"/>
+    <!-- 多选操作栏 (默认隐藏) -->
+    <LinearLayout
+        android:id="@+id/selection_action_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="8dp">
 
+        <Button
+            android:id="@+id/btn_cancel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="取消"/>
+
+        <TextView
+            android:id="@+id/tv_selected_count"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="已选0项"
+            android:gravity="center"/>
+
+        <Button
+            android:id="@+id/btn_confirm"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="确定"/>
+    </LinearLayout>
 </LinearLayout>
