@@ -7,7 +7,8 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.Drawable;
+import android.graphics.Bitmap;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -18,7 +19,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -28,46 +28,43 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.Target;
-import com.bumptech.glide.load.DataSource;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import jcifs.smb.NtlmPasswordAuthentication;
-import jcifs.smb.SmbException;
 import jcifs.smb.SmbFile;
 import jcifs.smb.SmbFileInputStream;
 
 public class LocalFilesFragment extends Fragment {
     private static final int REQUEST_STORAGE_PERMISSION = 100;
     private static final String SMB_URL = "smb://192.168.1.1/SharedFolder/";
-
+    private enum FileType {
+        ALL, VIDEO, IMAGE
+    }
     private GridView gridView;
     private FileAdapter adapter;
     private List<FileItem> fileItems = new ArrayList<>();
     private boolean isSelectMode = false;
-    private Set<Integer> selectedPositions = new HashSet<>();
-    private FileType currentType = FileType.ALL;
+    private Set<FileItem> selectedItems = new HashSet<>();
+    private FileType currentType = FileType.VIDEO;
     private View selectionActionBar;
     private TextView tvSelectedCount;
 
@@ -75,83 +72,61 @@ public class LocalFilesFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_local_files, container, false);
 
-        gridView = view.findViewById(R.id.file_grid_view);
-        Button selectBtn = view.findViewById(R.id.select_btn);
-        Button videoBtn = view.findViewById(R.id.video_btn);
-        Button imageBtn = view.findViewById(R.id.image_btn);
-        selectionActionBar = view.findViewById(R.id.selection_action_bar);
-        tvSelectedCount = view.findViewById(R.id.tv_selected_count);
-        Button btnCancel = view.findViewById(R.id.btn_cancel);
-        Button btnConfirm = view.findViewById(R.id.btn_confirm);
-
-        // 设置操作栏按钮点击事件
-        btnCancel.setOnClickListener(v -> exitSelectMode());
-        btnConfirm.setOnClickListener(v -> showActionDialog());
-
-        adapter = new FileAdapter(requireContext(), fileItems);
-        gridView.setAdapter(adapter);
-
-        selectBtn.setOnClickListener(v -> toggleSelectMode());
-        videoBtn.setOnClickListener(v -> filterFiles(FileType.VIDEO));
-        imageBtn.setOnClickListener(v -> filterFiles(FileType.IMAGE));
-
-        gridView.setOnItemClickListener((parent, view1, position, id) -> {
-            if (isSelectMode) {
-                toggleSelection(position);
-            } else {
-                handleFileClick(position);
-            }
-        });
-
-        //首页显示视频
-        filterFiles(FileType.VIDEO);
+        initializeViews(view);
+        setupAdapter();
+//        setupButtonListeners();
+        loadFiles();
 
         return view;
     }
 
-    private void toggleSelectMode() {
-        isSelectMode = !isSelectMode;
-        if (isSelectMode) {
-            enterSelectMode();
-        } else {
-            exitSelectMode();
-        }
-        updateSelectionState(); // 统一状态更新
+    private void initializeViews(View view) {
+        gridView = view.findViewById(R.id.file_grid_view);
+        selectionActionBar = view.findViewById(R.id.selection_action_bar);
+        tvSelectedCount = view.findViewById(R.id.tv_selected_count);
+
+        Button selectBtn = view.findViewById(R.id.select_btn);
+        Button videoBtn = view.findViewById(R.id.video_btn);
+        Button imageBtn = view.findViewById(R.id.image_btn);
+        Button btnCancel = view.findViewById(R.id.btn_cancel);
+        Button btnConfirm = view.findViewById(R.id.btn_confirm);
+
+        selectBtn.setOnClickListener(v -> toggleSelectMode());
+        videoBtn.setOnClickListener(v -> filterFiles(FileType.VIDEO));
+        imageBtn.setOnClickListener(v -> filterFiles(FileType.IMAGE));
+        btnCancel.setOnClickListener(v -> exitSelectMode());
+        btnConfirm.setOnClickListener(v -> showActionDialog());
     }
 
-    // 新增统一状态更新方法
+    private void setupAdapter() {
+        adapter = new FileAdapter(requireContext(), fileItems);
+        gridView.setAdapter(adapter);
+        gridView.setOnItemClickListener((parent, view1, position, id) -> {
+            if (isSelectMode) toggleSelection(position);
+            else handleFileClick(position);
+        });
+    }
+
+    private void toggleSelectMode() {
+        isSelectMode = !isSelectMode;
+        if (!isSelectMode) selectedItems.clear();
+        updateSelectionState();
+    }
+
     private void updateSelectionState() {
         selectionActionBar.setVisibility(isSelectMode ? View.VISIBLE : View.GONE);
         updateSelectedCount();
         adapter.notifyDataSetChanged();
     }
 
-    private void enterSelectMode() {
-        isSelectMode = true;
-        selectionActionBar.setVisibility(View.VISIBLE);
-        updateSelectedCount();
-    }
-
-    private void exitSelectMode() {
-        isSelectMode = false;
-        selectedPositions.clear();
-        selectionActionBar.setVisibility(View.GONE);
-        updateSelectedCount();
-    }
-
     private void updateSelectedCount() {
-        int selectedCount = selectedPositions.size();
-        tvSelectedCount.setText("已选 " + selectedCount + " 项");
-        Log.d("LocalFilesFragment", "Updated selected count text: " + tvSelectedCount.getText());
+        tvSelectedCount.setText("已选 " + selectedItems.size() + " 项");
     }
 
     private void toggleSelection(int position) {
-        if (selectedPositions.contains(position)) {
-            selectedPositions.remove(position);
-        } else {
-            selectedPositions.add(position);
-        }
-        Log.d("LocalFilesFragment", "Selected count: " + selectedPositions.size());
+        FileItem item = fileItems.get(position);
+        if (selectedItems.contains(item)) selectedItems.remove(item);
+        else selectedItems.add(item);
         updateSelectedCount();
         adapter.notifyDataSetChanged();
     }
@@ -172,9 +147,7 @@ public class LocalFilesFragment extends Fragment {
                     for (SmbFile file : smbDir.listFiles()) {
                         String name = file.getName();
                         boolean isVideo = isVideoFile(name);
-                        if (currentType == FileType.ALL ||
-                                (currentType == FileType.VIDEO && isVideo) ||
-                                (currentType == FileType.IMAGE && !isVideo)) {
+                        if (shouldAddFile(isVideo)) {
                             items.add(new FileItem(name, file.getPath(), isVideo));
                         }
                     }
@@ -188,83 +161,78 @@ public class LocalFilesFragment extends Fragment {
             protected void onPostExecute(List<FileItem> items) {
                 fileItems.clear();
                 fileItems.addAll(items);
+                selectedItems.clear();
                 adapter.notifyDataSetChanged();
             }
         }.execute();
     }
 
+    private boolean shouldAddFile(boolean isVideo) {
+        return currentType == FileType.ALL ||
+                (currentType == FileType.VIDEO && isVideo) ||
+                (currentType == FileType.IMAGE && !isVideo);
+    }
+    private void enterSelectMode() {
+        isSelectMode = true;
+        selectionActionBar.setVisibility(View.VISIBLE);
+        updateSelectedCount();
+    }
+
+    private void exitSelectMode() {
+        isSelectMode = false;
+        selectionActionBar.setVisibility(View.GONE);
+        updateSelectedCount();
+    }
     private void handleFileClick(int position) {
         FileItem item = fileItems.get(position);
-        if (item.isVideo()) {
-            playVideo(item.getPath());
-        } else {
-            previewImage(item.getPath());
-        }
+        if (item.isVideo) playVideo(item.path);
+        else previewImage(item.path);
     }
 
     private void playVideo(String path) {
-        try {
-            SmbFile smbFile = new SmbFile(path);
-            File cacheDir = requireContext().getCacheDir();
-            File tempFile = File.createTempFile("video", ".mp4", cacheDir);
-            Handler mainHandler = new Handler(Looper.getMainLooper());
-            new Thread(() -> {
-                try {
-                    copySmbToLocal(smbFile, tempFile);
-                    mainHandler.post(() -> {
-                        // 文件复制成功，播放视频
-                        Intent intent = new Intent(Intent.ACTION_VIEW);
-                        Uri uri = FileProvider.getUriForFile(requireContext(),
-                                requireContext().getPackageName() + ".provider", tempFile);
-                        intent.setDataAndType(uri, "video/*");
-                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        startActivity(intent);
-                    });
-                } catch (IOException e) {
-                    Log.e("Copy", "文件复制失败: " + e.getMessage(), e);
-                    mainHandler.post(() -> {
-                        Toast.makeText(requireContext(), "文件复制失败，无法播放视频", Toast.LENGTH_SHORT).show();
-                    });
-                }
-            }).start();
-        } catch (Exception e) {
-            Log.e("PlayVideo", "未知异常: ", e);
-            Toast.makeText(requireContext(), "未知异常，无法播放视频", Toast.LENGTH_SHORT).show();
-        }
+        new Thread(() -> {
+            try {
+                SmbFile smbFile = new SmbFile(path);
+                File tempFile = createTempFile("video", ".mp4");
+                copySmbToLocal(smbFile, tempFile);
+
+                runOnUiThread(() -> {
+                    Uri uri = FileProvider.getUriForFile(requireContext(),
+                            requireContext().getPackageName() + ".provider", tempFile);
+                    startActivity(new Intent(Intent.ACTION_VIEW)
+                            .setDataAndType(uri, "video/*")
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
+                });
+            } catch (Exception e) {
+                showError("无法播放视频");
+            }
+        }).start();
     }
 
     private void previewImage(String path) {
-        try {
-            SmbFile smbFile = new SmbFile(path);
-            File cacheDir = requireContext().getCacheDir();
-            File tempFile = File.createTempFile("image", ".jpg", cacheDir);
+        new Thread(() -> {
+            try {
+                SmbFile smbFile = new SmbFile(path);
+                File tempFile = createTempFile("image", ".jpg");
+                copySmbToLocal(smbFile, tempFile);
 
-            Handler mainHandler = new Handler(Looper.getMainLooper());
-            new Thread(() -> {
-                try {
-                    copySmbToLocal(smbFile, tempFile);
-                    mainHandler.post(() -> {
-                        // 文件复制成功，打开图片预览界面
-                        Intent intent = new Intent(requireContext(), ImageViewerActivity.class);
-                        intent.putExtra("image_path", tempFile.getAbsolutePath());
-                        startActivity(intent);
-                    });
-                } catch (IOException e) {
-                    Log.e("Copy", "文件复制失败: " + e.getMessage(), e);
-                    mainHandler.post(() -> {
-                        Toast.makeText(requireContext(), "文件复制失败，无法预览图片", Toast.LENGTH_SHORT).show();
-                    });
-                }
-            }).start();
-        } catch (Exception e) {
-            Log.e("PreviewImage", "未知异常: ", e);
-            Toast.makeText(requireContext(), "未知异常，无法预览图片", Toast.LENGTH_SHORT).show();
-        }
+                runOnUiThread(() -> {
+                    startActivity(new Intent(requireContext(), ImageViewerActivity.class)
+                            .putExtra("image_path", tempFile.getAbsolutePath()));
+                });
+            } catch (Exception e) {
+                showError("无法预览图片");
+            }
+        }).start();
+    }
+
+    private File createTempFile(String prefix, String suffix) throws IOException {
+        return File.createTempFile(prefix, suffix, requireContext().getCacheDir());
     }
 
     private void copySmbToLocal(SmbFile smbFile, File localFile) throws IOException {
-        try (SmbFileInputStream in = new SmbFileInputStream(smbFile);
-             FileOutputStream out = new FileOutputStream(localFile)) {
+        try (InputStream in = new SmbFileInputStream(smbFile);
+             OutputStream out = new FileOutputStream(localFile)) {
             byte[] buffer = new byte[4096];
             int len;
             while ((len = in.read(buffer)) > 0) {
@@ -273,95 +241,22 @@ public class LocalFilesFragment extends Fragment {
         }
     }
 
-    // 仅在退出选择模式时弹出对话框
-    // 修改后的操作对话框显示方法
     private void showActionDialog() {
         new AlertDialog.Builder(requireContext())
                 .setTitle("请选择操作")
                 .setItems(new String[]{"下载到本地", "删除文件"}, (dialog, which) -> {
-                    if (which == 0) {
-                        checkStoragePermission();
-                    } else {
-                        confirmDelete();
-                    }
-                    exitSelectMode(); // 立即退出选择模式
-                })
-                .setOnDismissListener(dialog -> exitSelectMode())
-                .show();
+                    if (which == 0) checkStoragePermission();
+                    else confirmDelete();
+                    exitSelectMode();
+                }).show();
     }
 
-    // 添加删除确认对话框
     private void confirmDelete() {
         new AlertDialog.Builder(requireContext())
-                .setMessage("确定要删除选中的 " + selectedPositions.size() + " 个文件吗？")
+                .setMessage("确定要删除选中的 " + selectedItems.size() + " 个文件吗？")
                 .setPositiveButton("删除", (d, w) -> deleteSelectedFiles())
                 .setNegativeButton("取消", null)
                 .show();
-    }
-
-    private void checkStoragePermission() {
-        if (ContextCompat.checkSelfPermission(requireContext(),
-                Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(requireActivity(),
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    REQUEST_STORAGE_PERMISSION);
-        } else {
-            downloadSelectedFiles();
-        }
-    }
-
-    private void downloadSelectedFiles() {
-        if (ContextCompat.checkSelfPermission(requireContext(),
-                Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(requireActivity(),
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    REQUEST_STORAGE_PERMISSION);
-            return;
-        }
-        new DownloadTask().execute();
-    }
-
-    @SuppressLint("StaticFieldLeak")
-    private class DownloadTask extends AsyncTask<Void, Void, Integer> {
-        @Override
-        protected Integer doInBackground(Void... voids) {
-            int count = 0;
-            for (int position : selectedPositions) {
-                FileItem item = fileItems.get(position);
-                try {
-                    SmbFile smbFile = new SmbFile(item.getPath());
-                    File downloadDir = Environment.getExternalStoragePublicDirectory(
-                            Environment.DIRECTORY_DOWNLOADS);
-                    if (!downloadDir.exists()) {
-                        if (!downloadDir.mkdirs()) {
-                            Log.e("Download", "无法创建下载目录: " + downloadDir.getAbsolutePath());
-                            continue;
-                        }
-                    }
-                    File dest = new File(downloadDir, item.getName());
-                    try (InputStream in = new SmbFileInputStream(smbFile);
-                         OutputStream out = new FileOutputStream(dest)) {
-                        byte[] buffer = new byte[4096];
-                        int len;
-                        while ((len = in.read(buffer)) > 0) {
-                            out.write(buffer, 0, len);
-                        }
-                        count++;
-                    }
-                } catch (SmbException e) {
-                    Log.e("Download", "SMB 异常，下载失败: " + item.getName(), e);
-                } catch (Exception e) {
-                    Log.e("Download", "下载失败: " + item.getName(), e);
-                }
-            }
-            return count;
-        }
-
-        @Override
-        protected void onPostExecute(Integer count) {
-            Toast.makeText(requireContext(),
-                    "成功下载 " + count + " 个文件", Toast.LENGTH_SHORT).show();
-        }
     }
 
     @SuppressLint("StaticFieldLeak")
@@ -370,16 +265,15 @@ public class LocalFilesFragment extends Fragment {
             @Override
             protected Integer doInBackground(Void... voids) {
                 int count = 0;
-                for (int position : selectedPositions) {
-                    FileItem item = fileItems.get(position);
+                for (FileItem item : selectedItems) {
                     try {
-                        SmbFile smbFile = new SmbFile(item.getPath());
+                        SmbFile smbFile = new SmbFile(item.path);
                         if (smbFile.exists()) {
                             smbFile.delete();
                             count++;
                         }
                     } catch (Exception e) {
-                        Log.e("Delete", "Error deleting: " + item.getName(), e);
+                        Log.e("Delete", "删除失败: " + item.name, e);
                     }
                 }
                 return count;
@@ -387,16 +281,43 @@ public class LocalFilesFragment extends Fragment {
 
             @Override
             protected void onPostExecute(Integer count) {
-                Toast.makeText(requireContext(),
-                        "成功删除 " + count + " 个文件", Toast.LENGTH_SHORT).show();
+                showToast("成功删除 " + count + " 个文件");
                 loadFiles();
             }
         }.execute();
     }
 
+    private void checkStoragePermission() {
+        if (hasStoragePermission()) downloadSelectedFiles();
+        else requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_STORAGE_PERMISSION);
+    }
+
+    private void downloadSelectedFiles() {
+        new Thread(() -> {
+            int count = 0;
+            for (FileItem item : selectedItems) {
+                try {
+                    SmbFile smbFile = new SmbFile(item.path);
+                    File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                    File dest = new File(downloadDir, item.name);
+                    copySmbToLocal(smbFile, dest);
+                    count++;
+                } catch (Exception e) {
+                    Log.e("Download", "下载失败: " + item.name, e);
+                }
+            }
+            showToast("成功下载 " + count + " 个文件");
+        }).start();
+    }
+
+    private boolean hasStoragePermission() {
+        return ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+    }
+
     private class FileAdapter extends BaseAdapter {
-        private Context context;
-        private List<FileItem> items;
+        private  Context context;
+        private  List<FileItem> items;
 
         FileAdapter(Context context, List<FileItem> items) {
             this.context = context;
@@ -423,23 +344,14 @@ public class LocalFilesFragment extends Fragment {
             ViewHolder holder;
             if (convertView == null) {
                 convertView = LayoutInflater.from(context).inflate(R.layout.item_file_preview, parent, false);
-                holder = new ViewHolder();
-                holder.image = convertView.findViewById(R.id.preview_image);
-                holder.name = convertView.findViewById(R.id.file_name);
-                holder.checkbox = convertView.findViewById(R.id.selection_checkbox);
-                holder.videoIcon = convertView.findViewById(R.id.video_icon);
+                holder = new ViewHolder(convertView);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
             }
 
             FileItem item = getItem(position);
-            holder.name.setText(item.getName());
-            holder.checkbox.setVisibility(isSelectMode ? View.VISIBLE : View.GONE);
-            holder.checkbox.setChecked(selectedPositions.contains(position));
-            holder.videoIcon.setVisibility(item.isVideo() ? View.VISIBLE : View.GONE);
-
-            loadThumbnail(item, holder.image);
+            holder.bind(item, isSelectMode, selectedItems.contains(item));
             convertView.setOnClickListener(v -> {
                 if (isSelectMode) {
                     toggleSelection(position);
@@ -447,81 +359,111 @@ public class LocalFilesFragment extends Fragment {
                     handleFileClick(position);
                 }
             });
-            // 添加长按进入选择模式
-            convertView.setOnLongClickListener(v -> {
-                if (!isSelectMode) {
-                    enterSelectMode();
-                    toggleSelection(position);
-                    return true;
-                }
-                return false;
-            });
+//            convertView.setOnLongClickListener(v -> enterSelectMode());
 
             return convertView;
         }
 
-        private void loadThumbnail(FileItem item, ImageView imageView) {
-            try {
-                SmbFile smbFile = new SmbFile(item.getPath());
-                RequestOptions options = new RequestOptions()
-                        .placeholder(R.drawable.ic_broken_image)
-                        .error(R.drawable.ic_broken_image);
 
-                if (item.isVideo()) {
-                    Glide.with(context)
-                            .load(new SmbFileInputStream(smbFile))
-                            .apply(options.frame(1000000))
-                            .into(imageView);
-                } else {
-                    Glide.with(context)
-                            .load(new SmbFileInputStream(smbFile))
-                            .apply(options)
-                            .into(imageView);
+        private void copyStreamToFile(SmbFile smbFile, File localFile) throws IOException {
+            try (SmbFileInputStream in = new SmbFileInputStream(smbFile);
+                 FileOutputStream out = new FileOutputStream(localFile)) {
+                byte[] buffer = new byte[4096];
+                int len;
+                while ((len = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, len);
                 }
-            } catch (Exception e) {
-                Glide.with(context).load(R.drawable.ic_broken_image).into(imageView);
             }
         }
-
-        class ViewHolder {
-            ImageView image;
+        private class ViewHolder {
+            ImageView image, videoIcon;
             TextView name;
             CheckBox checkbox;
-            ImageView videoIcon;
+
+            ViewHolder(View view) {
+                image = view.findViewById(R.id.preview_image);
+                name = view.findViewById(R.id.file_name);
+                checkbox = view.findViewById(R.id.selection_checkbox);
+                videoIcon = view.findViewById(R.id.video_icon);
+            }
+
+            void bind(FileItem item, boolean isSelectMode, boolean isSelected) {
+                name.setText(item.name);
+                videoIcon.setVisibility(item.isVideo ? View.VISIBLE : View.GONE);
+                checkbox.setVisibility(isSelectMode ? View.VISIBLE : View.GONE);
+                checkbox.setChecked(isSelected);
+                loadThumbnail(item);
+            }
+
+            void loadThumbnail(FileItem item) {
+                try {
+                    if (item.isVideo) loadVideoThumbnail(item.path);
+                    else loadImageThumbnail(item.path);
+                } catch (Exception e) {
+                    Glide.with(context).load(R.drawable.ic_broken_image).into(image);
+                }
+            }
+
+            void loadVideoThumbnail(String path) {
+                new Thread(() -> {
+                    try {
+                        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+                        File temp = createTempFile("thumb", ".mp4");
+                        SmbFile smbFile = new SmbFile(path);
+                        copyStreamToFile(smbFile, temp);
+                        retriever.setDataSource(temp.getPath());
+                        Bitmap bitmap = retriever.getFrameAtTime();
+                        runOnUiThread(() -> image.setImageBitmap(bitmap));
+                    } catch (Exception e) {
+                        setErrorImage();
+                    }
+                }).start();
+            }
+
+            void loadImageThumbnail(String path) {
+                try {
+                    Glide.with(context)
+                            .load(new SmbFileInputStream(new SmbFile(path)))
+                            .apply(new RequestOptions()
+                                    .placeholder(R.drawable.ic_broken_image)
+                                    .error(R.drawable.ic_broken_image))
+                            .into(image);
+                } catch (Exception e) {
+                    setErrorImage();
+                }
+            }
+
+            void setErrorImage() {
+                runOnUiThread(() ->
+                        Glide.with(context).load(R.drawable.ic_broken_image).into(image));
+            }
         }
     }
 
-    public void onDestroyView() {
-        super.onDestroyView();
-        exitSelectMode(); // 确保视图销毁时清理状态
+    // Helper方法
+    private void runOnUiThread(Runnable action) {
+        new Handler(Looper.getMainLooper()).post(action);
     }
 
+    private void showToast(String message) {
+        runOnUiThread(() -> Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show());
+    }
+
+    private void showError(String message) {
+        runOnUiThread(() -> Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show());
+    }
+
+    // FileItem类
     private static class FileItem {
-        private String name;
-        private String path;
-        private boolean isVideo;
+        String name;
+        String path;
+        boolean isVideo;
 
         FileItem(String name, String path, boolean isVideo) {
             this.name = name;
             this.path = path;
             this.isVideo = isVideo;
         }
-
-        String getName() {
-            return name;
-        }
-
-        String getPath() {
-            return path;
-        }
-
-        boolean isVideo() {
-            return isVideo;
-        }
-    }
-
-    private enum FileType {
-        ALL, VIDEO, IMAGE
     }
 
     private boolean isVideoFile(String name) {
@@ -530,8 +472,8 @@ public class LocalFilesFragment extends Fragment {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_STORAGE_PERMISSION && grantResults.length > 0
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        if (requestCode == REQUEST_STORAGE_PERMISSION && grantResults.length > 0 &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             downloadSelectedFiles();
         }
     }
