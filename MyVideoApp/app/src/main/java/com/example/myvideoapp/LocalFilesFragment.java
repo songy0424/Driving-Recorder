@@ -86,6 +86,7 @@ public class LocalFilesFragment extends Fragment {
     private TextView tvSelectedCount;
     private Map<String, Bitmap> thumbnailCache = new HashMap<>();
     private ProgressDialog progressDialog;
+    private Button selectAllBtn;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -114,7 +115,10 @@ public class LocalFilesFragment extends Fragment {
         imageBtn.setOnClickListener(v -> filterFiles(FileType.IMAGE));
         btnCancel.setOnClickListener(v -> exitSelectMode());
         btnConfirm.setOnClickListener(v -> showActionDialog());
+        selectAllBtn = view.findViewById(R.id.select_all_btn);
+        selectAllBtn.setOnClickListener(v -> toggleSelectAll());
     }
+
 
     private void setupAdapter() {
         adapter = new FileAdapter(requireContext(), fileItems);
@@ -127,7 +131,16 @@ public class LocalFilesFragment extends Fragment {
 
     private void toggleSelectMode() {
         isSelectMode = !isSelectMode;
-        if (!isSelectMode) selectedItems.clear();
+
+        if (isSelectMode) {
+            // 进入选择模式时清空历史选中项
+            selectedItems.clear();
+            selectAllBtn.setVisibility(View.VISIBLE);
+            selectAllBtn.setText("全选");
+        } else {
+            exitSelectMode();
+        }
+
         updateSelectionState();
     }
 
@@ -143,12 +156,35 @@ public class LocalFilesFragment extends Fragment {
 
     private void toggleSelection(int position) {
         FileItem item = fileItems.get(position);
-        if (selectedItems.contains(item)) selectedItems.remove(item);
-        else selectedItems.add(item);
+        if (selectedItems.contains(item)) {
+            selectedItems.remove(item);
+        } else {
+            selectedItems.add(item);
+        }
+
+        // 同步全选按钮状态
+        if (selectedItems.size() == fileItems.size()) {
+            selectAllBtn.setText("全不选");
+        } else {
+            selectAllBtn.setText("全选");
+        }
+
         updateSelectedCount();
         adapter.notifyDataSetChanged();
     }
-
+    private void toggleSelectAll() {
+        if (selectedItems.size() == fileItems.size()) {
+            // 全不选
+            selectedItems.clear();
+            selectAllBtn.setText("全选");
+        } else {
+            // 全选
+            selectedItems.addAll(fileItems);
+            selectAllBtn.setText("全不选");
+        }
+        adapter.notifyDataSetChanged();
+        updateSelectedCount();
+    }
     private void filterFiles(FileType type) {
         currentType = type;
         loadFiles();
@@ -185,7 +221,8 @@ public class LocalFilesFragment extends Fragment {
             protected void onPostExecute(List<FileItem> items) {
                 fileItems.clear();
                 fileItems.addAll(items);
-                selectedItems.clear();
+                selectedItems.clear(); // 加载新文件时清空选中项
+                exitSelectMode();       // 强制退出选择模式
                 adapter.notifyDataSetChanged();
             }
         }.execute();
@@ -206,8 +243,9 @@ public class LocalFilesFragment extends Fragment {
     private void exitSelectMode() {
         isSelectMode = false;
         selectionActionBar.setVisibility(View.GONE);
-        updateSelectedCount();
-    }
+        selectAllBtn.setVisibility(View.GONE);
+        selectAllBtn.setText("全选"); // 重置按钮文字
+        adapter.clearSelections();    }
 
     private void handleFileClick(int position) {
         FileItem item = fileItems.get(position);
@@ -383,7 +421,8 @@ public class LocalFilesFragment extends Fragment {
                     message += "（跳过 " + finalSkipped + " 个已存在文件）";
                 }
                 showToast(message);
-
+                exitSelectMode();
+                loadFiles();
                 // 显示完整路径对话框
                 new AlertDialog.Builder(requireContext())
                         .setTitle("文件保存位置")
@@ -481,6 +520,9 @@ public class LocalFilesFragment extends Fragment {
             return convertView;
         }
 
+        public void clearSelections() {
+            notifyDataSetChanged();
+        }
 
         private void copyStreamToFile(SmbFile smbFile, File localFile) throws IOException {
             try (SmbFileInputStream in = new SmbFileInputStream(smbFile);
@@ -512,6 +554,10 @@ public class LocalFilesFragment extends Fragment {
                 videoIcon.setVisibility(item.isVideo ? View.VISIBLE : View.GONE);
                 checkbox.setVisibility(isSelectMode ? View.VISIBLE : View.GONE);
                 checkbox.setChecked(isSelected);
+                // 添加自动状态同步
+                if (selectedItems.size() == fileItems.size()) {
+                    selectAllBtn.setText("全不选");
+                }
                 loadThumbnail(item);
             }
 

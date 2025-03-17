@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QDateTime>
 #include <QPainter>
+#include <QProcess>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           ui(new Ui::MainWindow),
@@ -196,6 +197,7 @@ void MainWindow::displayFrameOnLabel(const QImage &qImage)
 
 void MainWindow::takeSnapshot(const QImage &qImage)
 {
+    QProcess process;
     // QString directory = "/home/nvidia/my_project/new_camera";         // 固定保存地址
     QString directory = "/mnt/myvideo/Picture";
     QDir().mkpath(directory);                                         // 确保目录存在
@@ -205,19 +207,25 @@ void MainWindow::takeSnapshot(const QImage &qImage)
     QString filePath = directory + "/" + fileName;
 
     qImage.save(filePath, "JPEG");
+    QString command = "sudo chmod 777 /mnt/myvideo/Picture -R";
+    process.start(command);
+    process.waitForFinished();
 }
 
 void MainWindow::slot_RecordVideo()
 {
+    QProcess process;
     if (!videorecord.isOpened() && isRecordVideo == false)
     {
         QString directory = "/mnt/myvideo/Video"; // 指定视频保存目录
-        QDir().mkpath(directory);                 // 确保目录存在
+        QString command = "sudo chmod 777 /mnt/myvideo/Video -R";
+        QDir().mkpath(directory); // 确保目录存在
 
         QString video_name = directory + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss") + ".mp4"; // 拼接完整路径
         std::string gst_out = "appsrc ! video/x-raw, format=BGR ! queue ! videoconvert ! video/x-raw,format=BGRx ! nvvidconv ! nvv4l2h264enc ! h264parse ! qtmux ! filesink location=" + video_name.toStdString();
-
         videorecord.open(gst_out, cv::CAP_GSTREAMER, 0, frameRate, cv::Size(width, height));
+        process.start(command);
+        process.waitForFinished();
         if (videorecord.isOpened())
         {
             isRecordVideo = true;
@@ -252,9 +260,10 @@ void MainWindow::slot_SaveVideo(const cv::Mat &image)
 
 void MainWindow::updateVideoFile()
 {
+    QProcess process;
     QString directory = "/mnt/myvideo/Video"; // 指定视频保存目录
-    QDir().mkpath(directory);                 // 确保目录存在
-
+    QString command = "sudo chmod 777 /mnt/myvideo/Video -R";
+    QDir().mkpath(directory);                                                                                     // 确保目录存在
     QString video_name = directory + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss") + ".mp4"; // 拼接完整路径
     std::string gst_out = "appsrc ! video/x-raw, format=BGR ! queue ! videoconvert ! video/x-raw,format=BGRx ! nvvidconv ! nvv4l2h264enc ! h264parse ! qtmux ! filesink location=" + video_name.toStdString();
 
@@ -263,6 +272,8 @@ void MainWindow::updateVideoFile()
 
     // 重新打开新的视频文件
     videorecord.open(gst_out, cv::CAP_GSTREAMER, 0, frameRate, cv::Size(width, height));
+    process.start(command);
+    process.waitForFinished();
 }
 
 void MainWindow::showSettings()
