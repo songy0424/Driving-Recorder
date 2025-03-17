@@ -60,8 +60,17 @@ import jcifs.smb.SmbFile;
 import jcifs.smb.SmbFileInputStream;
 
 public class LocalFilesFragment extends Fragment {
+    // 修改SMB基础路径和子目录
+    private static final String SMB_BASE_URL = "smb://192.168.1.1/SharedFolder/";
+    private static final String VIDEO_SUB_PATH = "Video/";
+    private static final String IMAGE_SUB_PATH = "Picture/";
+
+    // 修改文件类型判断逻辑
+    private boolean isVideoFile(String path) {
+        return path.contains(VIDEO_SUB_PATH); // 根据路径包含关系判断
+    }
     private static final int REQUEST_STORAGE_PERMISSION = 100;
-    private static final String SMB_URL = "smb://192.168.1.1/SharedFolder/";
+//    private static final String SMB_URL = "smb://192.168.1.1/SharedFolder/";
     private enum FileType {
         ALL, VIDEO, IMAGE
     }
@@ -82,7 +91,6 @@ public class LocalFilesFragment extends Fragment {
 
         initializeViews(view);
         setupAdapter();
-        //        setupButtonListeners();
         loadFiles();
 
         return view;
@@ -144,6 +152,7 @@ public class LocalFilesFragment extends Fragment {
         loadFiles();
     }
 
+    // 修改文件加载方法
     @SuppressLint("StaticFieldLeak")
     private void loadFiles() {
         new AsyncTask<Void, Void, List<FileItem>>() {
@@ -151,13 +160,18 @@ public class LocalFilesFragment extends Fragment {
             protected List<FileItem> doInBackground(Void... voids) {
                 List<FileItem> items = new ArrayList<>();
                 try {
-                    SmbFile smbDir = new SmbFile(SMB_URL);
+                    // 根据当前类型构建对应路径
+                    String subPath = currentType == FileType.VIDEO ? VIDEO_SUB_PATH :
+                            currentType == FileType.IMAGE ? IMAGE_SUB_PATH : "";
+                    SmbFile smbDir = new SmbFile(SMB_BASE_URL + subPath);
+
                     for (SmbFile file : smbDir.listFiles()) {
+                        String fullPath = file.getPath();
                         String name = file.getName();
-                        boolean isVideo = isVideoFile(name);
-                        if (shouldAddFile(isVideo)) {
-                            items.add(new FileItem(name, file.getPath(), isVideo));
-                        }
+                        boolean isVideo = isVideoFile(fullPath);
+
+                        // 添加文件时直接记录完整路径
+                        items.add(new FileItem(name, fullPath, isVideo));
                     }
                 } catch (Exception e) {
                     Log.e("SMB", "Error loading files", e);
@@ -311,12 +325,19 @@ public class LocalFilesFragment extends Fragment {
 
         new Thread(() -> {
             int count = 0;
+            int skippedCount = 0;
             int currentFileIndex = 0;
             for (FileItem item : selectedItems) {
                 try {
                     SmbFile smbFile = new SmbFile(item.path);
                     File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                     File dest = new File(downloadDir, item.name);
+                    // 检查本地文件是否存在
+                    if (dest.exists()) {
+                        skippedCount++;
+                        Log.d("Download", "文件已存在，跳过下载: " + dest.getAbsolutePath());
+                        continue;
+                    }
                     downloadFileWithProgress(smbFile, dest, currentFileIndex);
                     count++;
                 } catch (Exception e) {
@@ -327,9 +348,14 @@ public class LocalFilesFragment extends Fragment {
                 currentFileIndex++;
             }
             final int finalCount = count;
+            final int finalSkipped = skippedCount;
             runOnUiThread(() -> {
                 progressDialog.dismiss();
-                showToast("成功下载 " + finalCount + " 个文件");
+                String message = "成功下载 " + finalCount + " 个文件";
+                if (finalSkipped > 0) {
+                    message += ", " + finalSkipped + " 个文件已存在";
+                }
+                showToast(message);
             });
         }).start();
     }
@@ -524,10 +550,6 @@ public class LocalFilesFragment extends Fragment {
             this.path = path;
             this.isVideo = isVideo;
         }
-    }
-
-    private boolean isVideoFile(String name) {
-        return name.toLowerCase().matches(".*\\.(mp4|avi|mkv|mov)$");
     }
 
     @Override
