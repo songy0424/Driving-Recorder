@@ -221,7 +221,7 @@ void MainWindow::slot_RecordVideo()
         QString command = "sudo chmod 777 /mnt/myvideo/Video -R";
         QDir().mkpath(directory); // 确保目录存在
 
-        QString video_name = directory + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss") + ".mp4"; // 拼接完整路径
+        QString video_name = directory + "/" + QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss") + ".mp4"; // 拼接完整路径
         std::string gst_out = "appsrc ! video/x-raw, format=BGR ! queue ! videoconvert ! video/x-raw,format=BGRx ! nvvidconv ! nvv4l2h264enc ! h264parse ! qtmux ! filesink location=" + video_name.toStdString();
         videorecord.open(gst_out, cv::CAP_GSTREAMER, 0, frameRate, cv::Size(width, height));
         process.start(command);
@@ -263,8 +263,8 @@ void MainWindow::updateVideoFile()
     QProcess process;
     QString directory = "/mnt/myvideo/Video"; // 指定视频保存目录
     QString command = "sudo chmod 777 /mnt/myvideo/Video -R";
-    QDir().mkpath(directory);                                                                                     // 确保目录存在
-    QString video_name = directory + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss") + ".mp4"; // 拼接完整路径
+    QDir().mkpath(directory);                                                                                 // 确保目录存在
+    QString video_name = directory + "/" + QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss") + ".mp4"; // 拼接完整路径
     std::string gst_out = "appsrc ! video/x-raw, format=BGR ! queue ! videoconvert ! video/x-raw,format=BGRx ! nvvidconv ! nvv4l2h264enc ! h264parse ! qtmux ! filesink location=" + video_name.toStdString();
 
     // 关闭当前视频文件

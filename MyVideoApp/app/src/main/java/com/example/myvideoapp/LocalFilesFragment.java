@@ -51,10 +51,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -198,18 +203,32 @@ public class LocalFilesFragment extends Fragment {
             protected List<FileItem> doInBackground(Void... voids) {
                 List<FileItem> items = new ArrayList<>();
                 try {
-                    // 根据当前类型构建对应路径
                     String subPath = currentType == FileType.VIDEO ? VIDEO_SUB_PATH :
                             currentType == FileType.IMAGE ? IMAGE_SUB_PATH : "";
                     SmbFile smbDir = new SmbFile(SMB_BASE_URL + subPath);
 
-                    for (SmbFile file : smbDir.listFiles()) {
+                    // 修改文件遍历逻辑
+                    List<SmbFile> fileList = Arrays.asList(smbDir.listFiles());
+
+                    // 先排序SMB文件
+                    Collections.sort(fileList, (f1, f2) -> {
+                        try {
+                            return Long.compare(
+                                    parseTimestampFromName(f2.getName()), // 降序排列
+                                    parseTimestampFromName(f1.getName())
+                            );
+                        } catch (Exception e) {
+                            return 0;
+                        }
+                    });
+
+                    // 转换排序后的文件列表
+                    for (SmbFile file : fileList) {
                         String fullPath = file.getPath();
                         String name = file.getName();
                         boolean isVideo = isVideoFile(fullPath);
-
-                        // 添加文件时直接记录完整路径
-                        items.add(new FileItem(name, fullPath, isVideo));
+                        long timestamp = parseTimestampFromName(name);
+                        items.add(new FileItem(name, fullPath, isVideo, timestamp));
                     }
                 } catch (Exception e) {
                     Log.e("SMB", "Error loading files", e);
@@ -221,8 +240,8 @@ public class LocalFilesFragment extends Fragment {
             protected void onPostExecute(List<FileItem> items) {
                 fileItems.clear();
                 fileItems.addAll(items);
-                selectedItems.clear(); // 加载新文件时清空选中项
-                exitSelectMode();       // 强制退出选择模式
+                selectedItems.clear();
+                exitSelectMode();
                 adapter.notifyDataSetChanged();
             }
         }.execute();
@@ -584,7 +603,10 @@ public class LocalFilesFragment extends Fragment {
                         retriever.setDataSource(temp.getPath());
                         Bitmap bitmap = retriever.getFrameAtTime();
                         thumbnailCache.put(path, bitmap);
-                        runOnUiThread(() -> image.setImageBitmap(bitmap));
+                        runOnUiThread(() -> {
+                            thumbnailCache.put(path, bitmap);
+                            image.setImageBitmap(bitmap);
+                        });
                     } catch (Exception e) {
                         setErrorImage();
                     }
@@ -631,11 +653,22 @@ public class LocalFilesFragment extends Fragment {
         String name;
         String path;
         boolean isVideo;
-
-        FileItem(String name, String path, boolean isVideo) {
+        long timestamp; // 新增时间戳字段
+        FileItem(String name, String path, boolean isVideo, long timestamp) {
             this.name = name;
             this.path = path;
             this.isVideo = isVideo;
+            this.timestamp = timestamp;
+        }
+    }
+    private long parseTimestampFromName(String fileName) {
+        try {
+            String timeStr = fileName.substring(0, 15);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+            Date date = sdf.parse(timeStr);
+            return date != null ? date.getTime() : 0;
+        } catch (Exception e) {
+            return 0; // 解析失败返回0
         }
     }
 
