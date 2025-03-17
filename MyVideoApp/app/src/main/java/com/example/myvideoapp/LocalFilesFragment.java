@@ -5,6 +5,8 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -327,35 +329,74 @@ public class LocalFilesFragment extends Fragment {
             int count = 0;
             int skippedCount = 0;
             int currentFileIndex = 0;
+
+            // 创建基础目录
+            File baseDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "My Video");
+            File videoDir = new File(baseDir, "Video");
+            File pictureDir = new File(baseDir, "Picture");
+
+            // 确保目录存在
+            if (!videoDir.exists() && !videoDir.mkdirs()) {
+                showError("无法创建视频目录");
+                return;
+            }
+            if (!pictureDir.exists() && !pictureDir.mkdirs()) {
+                showError("无法创建图片目录");
+                return;
+            }
+
             for (FileItem item : selectedItems) {
                 try {
                     SmbFile smbFile = new SmbFile(item.path);
-                    File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                    File dest = new File(downloadDir, item.name);
-                    // 检查本地文件是否存在
+
+                    // 根据文件类型选择目标目录
+                    File targetDir = item.isVideo ? videoDir : pictureDir;
+                    File dest = new File(targetDir, item.name);
+
+                    // 检查文件是否存在
                     if (dest.exists()) {
                         skippedCount++;
-                        Log.d("Download", "文件已存在，跳过下载: " + dest.getAbsolutePath());
                         continue;
                     }
+
+                    // 执行下载
                     downloadFileWithProgress(smbFile, dest, currentFileIndex);
                     count++;
                 } catch (Exception e) {
                     Log.e("Download", "下载失败: " + item.name, e);
                 }
+
+                // 更新进度
                 final int finalCurrentFileIndex = currentFileIndex;
                 runOnUiThread(() -> progressDialog.setProgress(finalCurrentFileIndex + 1));
                 currentFileIndex++;
             }
+
+            // 显示结果
             final int finalCount = count;
             final int finalSkipped = skippedCount;
+            // 在下载完成提示后添加路径显示
             runOnUiThread(() -> {
                 progressDialog.dismiss();
-                String message = "成功下载 " + finalCount + " 个文件";
+                String message = "下载完成：" + finalCount + " 个文件已保存";
                 if (finalSkipped > 0) {
-                    message += ", " + finalSkipped + " 个文件已存在";
+                    message += "（跳过 " + finalSkipped + " 个已存在文件）";
                 }
                 showToast(message);
+
+                // 显示完整路径对话框
+                new AlertDialog.Builder(requireContext())
+                        .setTitle("文件保存位置")
+                        .setMessage(baseDir.getAbsolutePath())
+                        .setPositiveButton("复制路径", (d, w) -> {
+                            ClipboardManager clipboard = (ClipboardManager)
+                                    requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                            ClipData clip = ClipData.newPlainText("路径", baseDir.getAbsolutePath());
+                            clipboard.setPrimaryClip(clip);
+                            showToast("路径已复制到剪贴板");
+                        })
+                        .setNegativeButton("确定", null)
+                        .show();
             });
         }).start();
     }
