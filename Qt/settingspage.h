@@ -11,6 +11,9 @@
 #include <QSpacerItem>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QSettings>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 namespace Ui
 {
@@ -33,6 +36,7 @@ signals:
     void wifiStateChanged(bool isActive, const QString &ipAddress);
     void saveImageTriggered();
     void RecordVideoTriggered();
+    void configUpdated(const QJsonObject &config);
 
 private slots:
     void returnToMain(); // 返回主界面的槽函数
@@ -46,12 +50,17 @@ private:
     QStackedWidget *stackedWidget;
     QPushButton *wifiHotspotButton; // 定义为成员变量
     bool isHotspotActive;           // 添加热点状态变量
+    QTcpServer *tcpServer;
+    QTcpSocket *clientSocket;
+    QSettings *appSettings;
 
     QWidget *createBooleanSelectionPage(const QString &title, QPushButton *mainButton);
     QWidget *createTimeoutSelectionPage();
     QWidget *createResolutionSelectionPage();
-    QTcpServer *tcpServer;
-    QTcpSocket *clientSocket;
+    void saveCurrentConfig();
+    QJsonObject generateConfig();
+    void loadInitialConfig();
+    void onConfigUpdated(const QJsonObject &config);
 };
 
 #endif // SETTINGSPAGE_H

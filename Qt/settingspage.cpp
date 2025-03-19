@@ -1,8 +1,10 @@
-// SettingsPage.cpp
 #include "settingspage.h"
 #include "ui_settingspage.h"
 #include <QVBoxLayout>
 #include <QProcess>
+#include <QFile>
+#include <QDebug>
+#include <QRegularExpression>
 
 SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
                                               ui(new Ui::SettingsPage),
@@ -76,6 +78,11 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
         qDebug() << "Server start Success";
         connect(tcpServer, &QTcpServer::newConnection, this, &SettingsPage::newConnection);
     }
+
+    // 关联信号和槽
+    connect(this, &SettingsPage::configUpdated, this, &SettingsPage::onConfigUpdated);
+
+    loadInitialConfig();
 }
 
 void SettingsPage::newConnection()
@@ -90,6 +97,10 @@ void SettingsPage::readData()
     qDebug() << "Received:" << data;
 
     // 解析指令
+    // if (data.startsWith("GET_CONFIG"))
+    // {
+    //     sendConfigToClient();
+    // }
     if (data.startsWith("resolution:"))
     {
         QString res = data.split(":")[1];
@@ -105,6 +116,7 @@ void SettingsPage::readData()
             resolutionSelectionButton->setText("分辨率: 1920x1080 30FPS >");
             slot_resolutionChanged(1);
         }
+        saveCurrentConfig();
     }
     else if (data.startsWith("interval:"))
     {
@@ -132,6 +144,7 @@ void SettingsPage::readData()
             photoIntervalButton->setText("摄影间隔时间: 10分钟 >");
             interval = 600; // 默认1分钟
         }
+        saveCurrentConfig();
         emit photoIntervalChanged(interval);
     }
     else if (data == "SAVE_IMAGE\n")
@@ -188,7 +201,7 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
                     mainButton->setText(title + ": 关 >");
                 }
                 stackedWidget->setCurrentIndex(0); // 返回主界面
-            });
+                saveCurrentConfig(); });
 
     return page;
 }
@@ -258,7 +271,8 @@ QWidget *SettingsPage::createTimeoutSelectionPage()
                 stackedWidget->setCurrentIndex(0); // 返回主界面
 
                 // 发射摄影间隔更改信号
-                emit photoIntervalChanged(interval); });
+                emit photoIntervalChanged(interval);
+                saveCurrentConfig(); });
 
     return page;
 }
@@ -314,10 +328,12 @@ QWidget *SettingsPage::createResolutionSelectionPage()
         slot_resolutionChanged(selectedResolution);
 
         // 返回主界面
-        stackedWidget->setCurrentIndex(0); });
+        stackedWidget->setCurrentIndex(0);
+        saveCurrentConfig(); });
 
     return page;
 }
+
 SettingsPage::~SettingsPage()
 {
     delete ui;
@@ -386,4 +402,89 @@ void SettingsPage::createWiFiHotspot()
         // 获取WiFi接口的IP地址
         emit wifiStateChanged(true, "192.168.1.1");
     }
+    saveCurrentConfig();
+}
+
+void SettingsPage::loadInitialConfig()
+{
+    QFile file("config.json");
+    if (file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QByteArray data = file.readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+        QJsonObject obj = doc.object();
+
+        // 分辨率
+        int resIndex = obj["resolution/index"].toInt(0); // 没有文件默认值为0
+        slot_resolutionChanged(resIndex);
+
+        // 摄影间隔
+        int interval = obj["capture/interval"].toInt(60);
+        photoIntervalButton->setText(QString("摄影间隔时间: %1分钟 >").arg(interval / 60));
+
+        // WiFi热点状态
+        isHotspotActive = obj["network/hotspot"].toBool(false);
+        wifiHotspotButton->setText(QString("Wi-Fi 热点: %1 >").arg(isHotspotActive ? "开" : "关"));
+
+        file.close();
+    }
+    else
+    {
+        qDebug() << "open error";
+    }
+}
+
+QJsonObject SettingsPage::generateConfig()
+{
+    QJsonObject obj;
+
+    // 分辨率
+    obj["resolution/index"] = resolutionSelectionButton->text().contains("1280") ? 0 : 1;
+
+    // 摄影间隔
+    QRegularExpression re("(\\d+)分");
+    QRegularExpressionMatch match = re.match(photoIntervalButton->text());
+    if (match.hasMatch())
+    {
+        int interval = match.captured(1).toInt();
+        obj["capture/interval"] = interval * 60;
+    }
+    else
+    {
+        obj["capture/interval"] = 60; // 默认1分钟
+    }
+
+    // 热点状态
+    obj["network/hotspot"] = isHotspotActive;
+
+    return obj;
+}
+
+void SettingsPage::saveCurrentConfig()
+{
+    QJsonObject obj = generateConfig();
+
+    QJsonDocument doc(obj);
+    QFile file("config.json");
+
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        if (file.write(doc.toJson()) == -1)
+        {
+            qDebug() << "Failed to write to file:" << file.errorString();
+        }
+        file.close();
+    }
+    else
+    {
+        qDebug() << "Failed to open file:" << file.errorString();
+    }
+
+    emit configUpdated(obj); // 直接发射 QJsonObject 类型的参数
+}
+
+void SettingsPage::onConfigUpdated(const QJsonObject &config)
+{
+    // 处理配置更新事件
+    qDebug() << "Config updated:" << config;
 }
