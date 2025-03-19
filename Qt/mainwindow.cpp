@@ -29,10 +29,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     connect(settingsPage, &SettingsPage::returnToMainWindow, this, &MainWindow::showMain); // 连接信号和槽
     connect(settingsPage, &SettingsPage::resolutionChanged, this, &MainWindow::updateResolution);
     connect(settingsPage, &SettingsPage::photoIntervalChanged, this, &MainWindow::updatePhotoInterval);
+    connect(settingsPage, &SettingsPage::saveImageTriggered, this, &MainWindow::slot_Photograph);
+    connect(settingsPage, &SettingsPage::RecordVideoTriggered, this, &MainWindow::slot_RecordVideo);
     connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showSettings); // 连接信号和槽
     connect(ui->snapshotButton, &QPushButton::clicked, this, &MainWindow::slot_Photograph);
     connect(ui->recordButton, &QPushButton::clicked, this, &MainWindow::slot_RecordVideo);
-
     std::string pipeline = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)" +
                            std::to_string(width) + ", height=(int)" +
                            std::to_string(height) + ", format=(string)NV12, framerate=(fraction)" +

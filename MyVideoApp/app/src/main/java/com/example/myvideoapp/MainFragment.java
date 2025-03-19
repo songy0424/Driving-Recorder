@@ -1,9 +1,12 @@
 package com.example.myvideoapp;
 
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -14,6 +17,7 @@ import androidx.media3.ui.PlayerView;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.ServerSocket;
 import java.net.Socket;
 
 public class MainFragment extends Fragment {
@@ -21,7 +25,9 @@ public class MainFragment extends Fragment {
     private Socket clientSocket;
     private boolean isConnected = false; // 新增连接状态标志
     private PrintWriter out;
-
+    private Button btnCapture;
+    private Button btnRecord;
+    private boolean isRecording = false;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_main, container, false);
@@ -30,6 +36,13 @@ public class MainFragment extends Fragment {
         player = new ExoPlayer.Builder(requireContext()).build();
         playerView.setPlayer(player);
 
+        // 绑定按钮
+        btnCapture = view.findViewById(R.id.btnCapture);
+        btnRecord = view.findViewById(R.id.btnRecord);
+
+        // 设置按钮监听
+        btnCapture.setOnClickListener(v -> handleCapture());
+        btnRecord.setOnClickListener(v -> handleRecording());
         return view;
     }
 
@@ -81,6 +94,28 @@ public class MainFragment extends Fragment {
     public void sendCommandToQt(String command) {
         if (out != null && !clientSocket.isClosed()) {
             new Thread(() -> out.println(command)).start();
+        }
+    }
+    private void handleCapture() {
+        if (isConnected) {
+            sendCommandToQt("SAVE_IMAGE");
+        } else {
+            Toast.makeText(requireContext(), "未连接到设备", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void handleRecording() {
+        if (isConnected) {
+            if (isRecording) {
+                sendCommandToQt("STOP_RECORD_VIDEO");
+                btnRecord.setText("录屏");
+            } else {
+                sendCommandToQt("START_RECORD_VIDEO");
+                btnRecord.setText("停止");
+            }
+            isRecording = !isRecording;
+        } else {
+            Toast.makeText(requireContext(), "未连接到设备", Toast.LENGTH_SHORT).show();
         }
     }
 

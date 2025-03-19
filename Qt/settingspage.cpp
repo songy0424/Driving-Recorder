@@ -134,6 +134,14 @@ void SettingsPage::readData()
         }
         emit photoIntervalChanged(interval);
     }
+    else if (data == "SAVE_IMAGE\n")
+    {
+        emit saveImageTriggered();
+    }
+    else if (data == "START_RECORD_VIDEO\n" || data == "STOP_RECORD_VIDEO\n")
+    {
+        emit RecordVideoTriggered();
+    }
 }
 
 QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushButton *mainButton)

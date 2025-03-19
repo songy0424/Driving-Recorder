@@ -31,6 +31,8 @@ signals:
     void resolutionChanged(int width, int height, int frameRate); // 发出分辨率改变的信号
     void photoIntervalChanged(int interval);                      // 发出摄影间隔改变的信号
     void wifiStateChanged(bool isActive, const QString &ipAddress);
+    void saveImageTriggered();
+    void RecordVideoTriggered();
 
 private slots:
     void returnToMain(); // 返回主界面的槽函数
