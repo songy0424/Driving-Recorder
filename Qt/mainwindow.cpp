@@ -102,19 +102,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
 MainWindow::~MainWindow()
 {
     camera->closeCamera();
-    if (appsrc)
-    {
-        gst_element_set_state(appsrc, GST_STATE_NULL);
-        gst_object_unref(appsrc);
-    }
-    if (factory)
-    {
-        g_object_unref(factory);
-    }
-    if (rtspServer)
-    {
-        g_object_unref(rtspServer);
-    }
+    stopRTSPServer();
     delete settingsPage; // 确保删除设置页面
     delete ui;
 }
@@ -157,10 +145,9 @@ void MainWindow::processFrame()
             GstFlowReturn ret;
             g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
             gst_buffer_unref(buffer);
+            //     if (ret)
+            //         qDebug() << "Push buffer error";
         }
-        // else
-        //     qDebug() << "Push buffer to appsrc Success";
-        // }
         // else
         // {
         //     qDebug() << "can not open src";
@@ -288,6 +275,11 @@ void MainWindow::showMain()
 {
     settingsPage->hide(); // 隐藏设置页面
     this->show();         // 显示主窗口
+
+    // 不全屏显示
+    // settingsPage->hide();
+    // this->setWindowFlags(Qt::Window); // 重置窗口标志为普通窗口
+    // this->showNormal();               // 确保以正常模式显示
 }
 
 void MainWindow::updateResolution(int width, int height, int frameRate)
@@ -348,12 +340,12 @@ void MainWindow::startRTSPServer(const QString &ipAddress)
                  "service", "8554",
                  nullptr);
 
-    // 创建媒体工厂
     factory = gst_rtsp_media_factory_new();
     const gchar *launch =
         "appsrc name=mysrc is-live=true format=time ! "
         "videoconvert ! nvvidconv ! "
-        "nvv4l2h264enc ! h264parse ! rtph264pay config-interval=1 name=pay0 pt=96";
+        "nvv4l2h264enc insert-sps-pps=true insert-vui=true ! h264parse ! "
+        "rtph264pay config-interval=1 name=pay0 pt=96";
 
     // 关键修改：通过媒体对象获取管道
     gst_rtsp_media_factory_set_launch(factory, launch);
@@ -365,53 +357,60 @@ void MainWindow::startRTSPServer(const QString &ipAddress)
     GstRTSPMountPoints *mounts = gst_rtsp_server_get_mount_points(rtspServer);
     gst_rtsp_mount_points_add_factory(mounts, "/stream", factory);
     g_object_unref(mounts);
-    // 启动服务
-    gst_rtsp_server_attach(rtspServer, NULL);
+
+    if (gst_rtsp_server_attach(rtspServer, nullptr) == 0)
+    {
+        qWarning() << "Failed to attach RTSP server";
+    }
+
     qDebug() << "RTSP server at rtsp://192.168.1.1:8554/stream\n";
 }
 
-void MainWindow::media_configure(GstRTSPMediaFactory *factory, GstRTSPMedia *media, gpointer user_data)
+void MainWindow::media_configure(GstRTSPMediaFactory *factory,
+                                 GstRTSPMedia *media,
+                                 gpointer user_data)
 {
     MainWindow *self = static_cast<MainWindow *>(user_data);
-    GstElement *element, *appsrc;
-    GstCaps *caps;
+    GstElement *element = gst_rtsp_media_get_element(media);
+    GstElement *appsrc = gst_bin_get_by_name_recurse_up(GST_BIN(element), "mysrc");
 
-    // 获取媒体元素
-    element = gst_rtsp_media_get_element(media);
-
-    // 查找 appsrc 元素
-    appsrc = gst_bin_get_by_name_recurse_up(GST_BIN(element), "mysrc");
-    if (!appsrc)
+    if (appsrc)
     {
-        qDebug() << "Failed to find appsrc in media element";
+        // 确保清理旧appsrc
+        if (self->appsrc)
+        {
+            gst_element_set_state(self->appsrc, GST_STATE_NULL);
+            gst_object_unref(self->appsrc);
+        }
+
+        // 设置 appsrc 属性
+        g_object_set(appsrc,
+                     "is-live", TRUE,
+                     "format", GST_FORMAT_TIME,
+                     nullptr);
+        g_object_set(appsrc,
+                     "max-latency", 1 * GST_MSECOND, // 最大延迟1毫秒
+                     "max-bytes", 0,                 // 禁用缓冲区大小限制
+                     nullptr);
+        // 设置视频能力
+        GstCaps *caps = gst_caps_new_simple("video/x-raw",
+                                            "format", G_TYPE_STRING, "BGR",
+                                            "width", G_TYPE_INT, self->width,
+                                            "height", G_TYPE_INT, self->height,
+                                            "framerate", GST_TYPE_FRACTION, 30, 1,
+                                            nullptr);
+        g_object_set(appsrc,
+                     "caps", caps,
+                     "stream-type", 0, // GST_APP_STREAM_TYPE_STREAM
+                     nullptr);
+        gst_caps_unref(caps);
+
+        // 保存 appsrc 指针
+        self->appsrc = appsrc;
+
+        // 释放媒体元素引用
         gst_object_unref(element);
-        return;
     }
-
-    // 设置 appsrc 属性
-    g_object_set(appsrc,
-                 "is-live", TRUE,
-                 "format", GST_FORMAT_TIME,
-                 nullptr);
-    g_object_set(appsrc,
-                 "max-latency", 1 * GST_MSECOND, // 最大延迟1毫秒
-                 "max-bytes", 0,                 // 禁用缓冲区大小限制
-                 nullptr);
-    // 设置视频能力
-    caps = gst_caps_new_simple("video/x-raw",
-                               "format", G_TYPE_STRING, "BGR",
-                               "width", G_TYPE_INT, self->width,
-                               "height", G_TYPE_INT, self->height,
-                               "framerate", GST_TYPE_FRACTION, 30, 1,
-                               nullptr);
-    g_object_set(appsrc, "caps", caps, nullptr);
-    gst_caps_unref(caps);
-
-    // 保存 appsrc 指针
-    self->appsrc = appsrc;
-
-    // 释放媒体元素引用
-    gst_object_unref(element);
 }
 
 void MainWindow::stopRTSPServer()
@@ -424,11 +423,14 @@ void MainWindow::stopRTSPServer()
     }
     if (factory)
     {
+        g_signal_handlers_disconnect_by_data(factory, this);
         g_object_unref(factory);
         factory = nullptr;
     }
     if (rtspServer)
     {
+        GstRTSPMountPoints *mounts = gst_rtsp_server_get_mount_points(rtspServer);
+        g_object_unref(mounts);
         g_object_unref(rtspServer);
         rtspServer = nullptr;
     }

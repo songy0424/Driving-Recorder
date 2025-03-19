@@ -52,9 +52,6 @@ public class MainFragment extends Fragment {
         isConnected = connected; // 更新连接状态
         if (connected) {
             setupSocketConnection();
-            if (isAdded()) {
-                startVideoPlayback();
-            }
         } else {
             if (player != null) {
                 player.stop();
