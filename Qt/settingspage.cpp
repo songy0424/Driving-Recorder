@@ -102,24 +102,26 @@ void SettingsPage::readData()
 
     if (data.startsWith("resolution:"))
     {
+        QRadioButton *res720p = resolutionSelectionPage->findChild<QRadioButton *>("res720pButton");
+        QRadioButton *res1080p = resolutionSelectionPage->findChild<QRadioButton *>("res1080pButton");
         QString res = data.split(":")[1];
         qDebug() << "res:" << res;
-        if (res == "1280p\n")
-        {
-            resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
-            slot_resolutionChanged(0);
-        }
-        else if (res == "1920p\n")
-        {
-            resolutionSelectionButton->setText("分辨率: 1920x1080 30FPS >");
-            slot_resolutionChanged(1);
-        }
+
+        res720p->setChecked(res == "1280p\n");
+        res1080p->setChecked(res == "1920p\n");
+        resolutionSelectionButton->setText(res == "1920p\n" ? "分辨率: 1920x1080 30FPS >" : "分辨率: 1280x720 30FPS >");
+        slot_resolutionChanged(res == "1920p\n");
     }
     else if (data.startsWith("interval:"))
     {
         QString res = data.split(":")[1];
         qDebug() << "res:" << res;
-        static int interval = 60;
+        QRadioButton *oneMin = photoIntervalPage->findChild<QRadioButton *>("oneMinButton");
+        QRadioButton *threeMin = photoIntervalPage->findChild<QRadioButton *>("threeMinButton");
+        QRadioButton *fiveMin = photoIntervalPage->findChild<QRadioButton *>("fiveMinButton");
+        QRadioButton *tenMin = photoIntervalPage->findChild<QRadioButton *>("tenMinButton");
+        static int interval;
+
         if (res == "1分钟\n")
         {
             photoIntervalButton->setText("摄影间隔时间: 1分钟 >");
@@ -140,6 +142,11 @@ void SettingsPage::readData()
             photoIntervalButton->setText("摄影间隔时间: 10分钟 >");
             interval = 600;
         }
+        oneMin->setChecked(interval == 60);
+        threeMin->setChecked(interval == 180);
+        fiveMin->setChecked(interval == 300);
+        tenMin->setChecked(interval == 600);
+
         emit photoIntervalChanged(interval);
     }
     else if (data == "SAVE_IMAGE\n")
