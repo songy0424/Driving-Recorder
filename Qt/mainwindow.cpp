@@ -25,30 +25,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     ui->setupUi(this);
     ui->label->setStyleSheet("QLabel{background-color:rgb(255,0,0);}");
 
-    settingsPage = new SettingsPage(this);                                                 // 创建设置页面实例
-    connect(settingsPage, &SettingsPage::returnToMainWindow, this, &MainWindow::showMain); // 连接信号和槽
+    settingsPage = new SettingsPage(this);
+    connect(settingsPage, &SettingsPage::returnToMainWindow, this, &MainWindow::showMain);
     connect(settingsPage, &SettingsPage::resolutionChanged, this, &MainWindow::updateResolution);
     connect(settingsPage, &SettingsPage::photoIntervalChanged, this, &MainWindow::updatePhotoInterval);
     connect(settingsPage, &SettingsPage::saveImageTriggered, this, &MainWindow::slot_Photograph);
     connect(settingsPage, &SettingsPage::RecordVideoTriggered, this, &MainWindow::slot_RecordVideo);
-    connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showSettings); // 连接信号和槽
+    connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showSettings);
     connect(ui->snapshotButton, &QPushButton::clicked, this, &MainWindow::slot_Photograph);
     connect(ui->recordButton, &QPushButton::clicked, this, &MainWindow::slot_RecordVideo);
-    std::string pipeline = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)" +
-                           std::to_string(width) + ", height=(int)" +
-                           std::to_string(height) + ", format=(string)NV12, framerate=(fraction)" +
-                           std::to_string(frameRate) + "/1 ! "
-                                                       "nvvidconv flip-method=0 ! video/x-raw, width=(int)" +
-                           std::to_string(width) + ", height=(int)" +
-                           std::to_string(height) + ", format=(string)BGRx ! "
-                                                    "videoconvert ! video/x-raw, format=(string)BGR ! appsink";
-    // std::string pipeline = "v4l2src device=/dev/video1 ! video/x-raw, format=YUY2, width=640, height=480, framerate=30/1 ! videoconvert ! appsink";
-
-    if (!camera->openCamera(pipeline))
-    {
-        qDebug("无法打开摄像头");
-    }
     connect(timer, &QTimer::timeout, this, &MainWindow::processFrame);
+
+    settingsPage->loadInitialConfig(); // 加载配置文件，更改设置选项
 
     timeLabel = new QLabel(this);
     timeLabel->setFixedSize(150, 30);                                                                     // 设置固定大小
@@ -286,9 +274,9 @@ void MainWindow::showMain()
 void MainWindow::updateResolution(int width, int height, int frameRate)
 {
     // 更新摄像头分辨率
-    this->width = width; // 这里只是示例，实际中您可能需要更新全局变量或成员变量
+    this->width = width;
     this->height = height;
-    this->frameRate = frameRate; // 假设帧率保持不变
+    this->frameRate = frameRate;
     std::string pipeline = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)" +
                            std::to_string(width) + ", height=(int)" +
                            std::to_string(height) + ", format=(string)NV12, framerate=(fraction)" +

@@ -17,49 +17,51 @@
 
 namespace Ui
 {
-    class SettingsPage; // 前向声明
+    class SettingsPage;
 }
 class SettingsPage : public QWidget
 {
     Q_OBJECT
-    QPushButton *resolutionSelectionButton;
-    QPushButton *photoIntervalButton;
 
 public:
     explicit SettingsPage(QWidget *parent = nullptr);
     ~SettingsPage();
+    void loadInitialConfig();
 
 signals:
     void returnToMainWindow();
-    void resolutionChanged(int width, int height, int frameRate); // 发出分辨率改变的信号
-    void photoIntervalChanged(int interval);                      // 发出摄影间隔改变的信号
+    void resolutionChanged(int width, int height, int frameRate);
+    void photoIntervalChanged(int interval);
     void wifiStateChanged(bool isActive, const QString &ipAddress);
     void saveImageTriggered();
     void RecordVideoTriggered();
     void configUpdated(const QJsonObject &config);
 
 private slots:
-    void returnToMain(); // 返回主界面的槽函数
+    void returnToMain();
     void slot_resolutionChanged(int index);
     void createWiFiHotspot();
     void newConnection();
     void readData();
+    void restoreDefaultConfig();
 
 private:
     Ui::SettingsPage *ui;
     QStackedWidget *stackedWidget;
-    QPushButton *wifiHotspotButton; // 定义为成员变量
-    bool isHotspotActive;           // 添加热点状态变量
+    QPushButton *wifiHotspotButton;
+    QPushButton *photoIntervalButton;
+    QPushButton *resolutionSelectionButton;
+    bool isHotspotActive;
     QTcpServer *tcpServer;
     QTcpSocket *clientSocket;
-    QSettings *appSettings;
-
+    QWidget *startupWifiPage;
+    QWidget *photoIntervalPage;
+    QWidget *resolutionSelectionPage;
     QWidget *createBooleanSelectionPage(const QString &title, QPushButton *mainButton);
     QWidget *createTimeoutSelectionPage();
     QWidget *createResolutionSelectionPage();
     void saveCurrentConfig();
     QJsonObject generateConfig();
-    void loadInitialConfig();
     void onConfigUpdated(const QJsonObject &config);
 };
 

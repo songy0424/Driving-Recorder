@@ -10,7 +10,12 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
                                               ui(new Ui::SettingsPage),
                                               stackedWidget(new QStackedWidget(this)),
                                               wifiHotspotButton(new QPushButton(this)),
-                                              isHotspotActive(false)
+                                              photoIntervalButton(nullptr),
+                                              resolutionSelectionButton(nullptr),
+                                              isHotspotActive(false),
+                                              startupWifiPage(nullptr),
+                                              photoIntervalPage(nullptr),
+                                              resolutionSelectionPage(nullptr)
 {
     ui->setupUi(this);
     this->hide();
@@ -20,8 +25,12 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     QVBoxLayout *mainLayout = new QVBoxLayout(mainPage);
     wifiHotspotButton->setText("Wi-Fi 热点: 关 >");
     QPushButton *startupWifiButton = new QPushButton("开机 Wi-Fi 设置: 关 >", this);
-    photoIntervalButton = new QPushButton("摄影间隔时间: 1分钟 >", this); // 摄影间隔
+    photoIntervalButton = new QPushButton("摄影间隔时间: 1分钟 >", this);
     resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
+    QPushButton *restoreButton = new QPushButton("恢复出厂设置", this);
+    restoreButton->setMinimumSize(100, 70);
+    restoreButton->setStyleSheet("QPushButton { font-size: 16px; }");
+
     wifiHotspotButton->setMinimumSize(100, 70);
     startupWifiButton->setMinimumSize(100, 70);
     photoIntervalButton->setMinimumSize(100, 70);
@@ -33,21 +42,20 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     resolutionSelectionButton->setStyleSheet("QPushButton { font-size: 16px;}");
     ui->returnButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
-    // 将按钮添加到主界面布局
     mainLayout->addWidget(wifiHotspotButton);
     mainLayout->addWidget(startupWifiButton);
     mainLayout->addWidget(photoIntervalButton);
     mainLayout->addWidget(resolutionSelectionButton);
+    mainLayout->addWidget(restoreButton);
     mainLayout->addWidget(ui->returnButton);
-    mainLayout->addStretch(); // 添加弹性空间，避免按钮堆积
+    mainLayout->addStretch();
 
     mainPage->setLayout(mainLayout);
-    stackedWidget->addWidget(mainPage); // 添加主界面到堆叠布局
+    stackedWidget->addWidget(mainPage);
 
-    // 创建选择界面
-    QWidget *startupWifiPage = createBooleanSelectionPage("开机 Wi-Fi 设置", startupWifiButton);
-    QWidget *photoIntervalPage = createTimeoutSelectionPage();
-    QWidget *resolutionSelectionPage = createResolutionSelectionPage();
+    startupWifiPage = createBooleanSelectionPage("开机 Wi-Fi 设置", startupWifiButton);
+    photoIntervalPage = createTimeoutSelectionPage();
+    resolutionSelectionPage = createResolutionSelectionPage();
 
     stackedWidget->addWidget(startupWifiPage);
     stackedWidget->addWidget(photoIntervalPage);
@@ -57,8 +65,7 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     layout->addWidget(stackedWidget);
     setLayout(layout);
 
-    // 连接按钮切换到对应页面
-
+    connect(restoreButton, &QPushButton::clicked, this, &SettingsPage::restoreDefaultConfig);
     connect(wifiHotspotButton, &QPushButton::clicked, this, &SettingsPage::createWiFiHotspot);
     connect(startupWifiButton, &QPushButton::clicked, this, [=]()
             { stackedWidget->setCurrentWidget(startupWifiPage); });
@@ -79,10 +86,7 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
         connect(tcpServer, &QTcpServer::newConnection, this, &SettingsPage::newConnection);
     }
 
-    // 关联信号和槽
     connect(this, &SettingsPage::configUpdated, this, &SettingsPage::onConfigUpdated);
-
-    loadInitialConfig();
 }
 
 void SettingsPage::newConnection()
@@ -96,18 +100,12 @@ void SettingsPage::readData()
     QString data = QString(clientSocket->readAll());
     qDebug() << "Received:" << data;
 
-    // 解析指令
-    // if (data.startsWith("GET_CONFIG"))
-    // {
-    //     sendConfigToClient();
-    // }
     if (data.startsWith("resolution:"))
     {
         QString res = data.split(":")[1];
         qDebug() << "res:" << res;
         if (res == "1280p\n")
         {
-            // 更新主界面按钮文字
             resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
             slot_resolutionChanged(0);
         }
@@ -116,16 +114,14 @@ void SettingsPage::readData()
             resolutionSelectionButton->setText("分辨率: 1920x1080 30FPS >");
             slot_resolutionChanged(1);
         }
-        saveCurrentConfig();
     }
     else if (data.startsWith("interval:"))
     {
         QString res = data.split(":")[1];
         qDebug() << "res:" << res;
-        static int interval = 60; // 默认1分钟
+        static int interval = 60;
         if (res == "1分钟\n")
         {
-            // 更新主界面按钮文字
             photoIntervalButton->setText("摄影间隔时间: 1分钟 >");
             interval = 60;
         }
@@ -142,9 +138,8 @@ void SettingsPage::readData()
         else if (res == "10分钟\n")
         {
             photoIntervalButton->setText("摄影间隔时间: 10分钟 >");
-            interval = 600; // 默认1分钟
+            interval = 600;
         }
-        saveCurrentConfig();
         emit photoIntervalChanged(interval);
     }
     else if (data == "SAVE_IMAGE\n")
@@ -155,6 +150,8 @@ void SettingsPage::readData()
     {
         emit RecordVideoTriggered();
     }
+
+    saveCurrentConfig();
 }
 
 QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushButton *mainButton)
@@ -162,19 +159,19 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
     QWidget *page = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(page);
 
-    QGroupBox *groupBox = new QGroupBox(title, this); // 添加分组框
+    QGroupBox *groupBox = new QGroupBox(title, this);
     QVBoxLayout *groupLayout = new QVBoxLayout(groupBox);
 
     QRadioButton *onButton = new QRadioButton("开", this);
+    onButton->setObjectName("onButton");
     QRadioButton *offButton = new QRadioButton("关", this);
-
-    offButton->setChecked(true); // 默认选择“关”
+    offButton->setObjectName("offButton");
+    offButton->setChecked(true);
 
     groupLayout->addWidget(onButton);
     groupLayout->addWidget(offButton);
     groupBox->setLayout(groupLayout);
 
-    // 返回按钮
     QPushButton *confirmButton = new QPushButton("确定", this);
 
     onButton->setMinimumSize(100, 70);
@@ -185,11 +182,10 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
     confirmButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     layout->addWidget(groupBox);
-    layout->addStretch(); // 增加弹性空间，使返回按钮居底部
+    layout->addStretch();
     layout->addWidget(confirmButton);
     page->setLayout(layout);
 
-    // 点击确定返回主界面并更新状态
     connect(confirmButton, &QPushButton::clicked, this, [=]()
             {
                 if (onButton->isChecked())
@@ -200,7 +196,7 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
                 {
                     mainButton->setText(title + ": 关 >");
                 }
-                stackedWidget->setCurrentIndex(0); // 返回主界面
+                stackedWidget->setCurrentIndex(0);
                 saveCurrentConfig(); });
 
     return page;
@@ -215,10 +211,14 @@ QWidget *SettingsPage::createTimeoutSelectionPage()
     QVBoxLayout *groupLayout = new QVBoxLayout(groupBox);
 
     QRadioButton *oneMinButton = new QRadioButton("1分钟", this);
+    oneMinButton->setObjectName("oneMinButton");
     QRadioButton *threeMinButton = new QRadioButton("3分钟", this);
+    threeMinButton->setObjectName("threeMinButton");
     QRadioButton *fiveMinButton = new QRadioButton("5分钟", this);
+    fiveMinButton->setObjectName("fiveMinButton");
     QRadioButton *tenMinButton = new QRadioButton("10分钟", this);
-    oneMinButton->setChecked(true); // 默认选择“1分钟”
+    tenMinButton->setObjectName("tenMinButton");
+    oneMinButton->setChecked(true);
 
     groupLayout->addWidget(oneMinButton);
     groupLayout->addWidget(threeMinButton);
@@ -240,14 +240,13 @@ QWidget *SettingsPage::createTimeoutSelectionPage()
     confirmButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     layout->addWidget(groupBox);
-    layout->addStretch(); // 增加弹性空间
+    layout->addStretch();
     layout->addWidget(confirmButton);
     page->setLayout(layout);
 
-    // 点击确定返回主界面并更新状态
     connect(confirmButton, &QPushButton::clicked, this, [=]()
             {
-                int interval = 60; // 默认1分钟
+                int interval = 60;
                 if (oneMinButton->isChecked())
                 {
                     photoIntervalButton->setText("摄影间隔时间: 1分钟 >");
@@ -268,9 +267,7 @@ QWidget *SettingsPage::createTimeoutSelectionPage()
                     photoIntervalButton->setText("摄影间隔时间: 10分钟 >");
                     interval = 600;
                 }
-                stackedWidget->setCurrentIndex(0); // 返回主界面
-
-                // 发射摄影间隔更改信号
+                stackedWidget->setCurrentIndex(0);
                 emit photoIntervalChanged(interval);
                 saveCurrentConfig(); });
 
@@ -286,8 +283,10 @@ QWidget *SettingsPage::createResolutionSelectionPage()
     QVBoxLayout *groupLayout = new QVBoxLayout(groupBox);
 
     QRadioButton *res720pButton = new QRadioButton("1280x720 30FPS", this);
+    res720pButton->setObjectName("res720pButton");
     QRadioButton *res1080pButton = new QRadioButton("1920x1080 30FPS", this);
-    res720pButton->setChecked(true); // 默认选中 720p
+    res1080pButton->setObjectName("res1080pButton");
+    res720pButton->setChecked(true);
 
     groupLayout->addWidget(res720pButton);
     groupLayout->addWidget(res1080pButton);
@@ -303,33 +302,34 @@ QWidget *SettingsPage::createResolutionSelectionPage()
     confirmButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     layout->addWidget(groupBox);
-    layout->addStretch(); // 弹性布局让按钮居底
+    layout->addStretch();
     layout->addWidget(confirmButton);
     page->setLayout(layout);
 
-    // 连接确定按钮和分辨率切换槽
     connect(confirmButton, &QPushButton::clicked, this, [=]()
             {
-        int selectedResolution = -1;
-        if (res720pButton->isChecked()) {
-            selectedResolution = 0; // 720p
-        } else if (res1080pButton->isChecked()) {
-            selectedResolution = 1; // 1080p
-        }
+                int selectedResolution = -1;
+                if (res720pButton->isChecked())
+                {
+                    selectedResolution = 0;
+                }
+                else if (res1080pButton->isChecked())
+                {
+                    selectedResolution = 1;
+                }
 
-        // 更新主界面按钮文字
-        if (selectedResolution == 0) {
-            resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
-        } else if (selectedResolution == 1) {
-            resolutionSelectionButton->setText("分辨率: 1920x1080 30FPS >");
-        }
+                if (selectedResolution == 0)
+                {
+                    resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
+                }
+                else if (selectedResolution == 1)
+                {
+                    resolutionSelectionButton->setText("分辨率: 1920x1080 30FPS >");
+                }
 
-        // 发射分辨率变更信号
-        slot_resolutionChanged(selectedResolution);
-
-        // 返回主界面
-        stackedWidget->setCurrentIndex(0);
-        saveCurrentConfig(); });
+                slot_resolutionChanged(selectedResolution);
+                stackedWidget->setCurrentIndex(0);
+                saveCurrentConfig(); });
 
     return page;
 }
@@ -341,13 +341,12 @@ SettingsPage::~SettingsPage()
 
 void SettingsPage::returnToMain()
 {
-    this->close();             // 隐藏设置页面
-    emit returnToMainWindow(); // 发送信号，通知主窗口显示
+    this->close();
+    emit returnToMainWindow();
 }
 
 void SettingsPage::slot_resolutionChanged(int index)
 {
-    // 根据下拉框的当前索引获取分辨率
     switch (index)
     {
     case 0:
@@ -356,9 +355,7 @@ void SettingsPage::slot_resolutionChanged(int index)
     case 1:
         emit resolutionChanged(1920, 1080, 30);
         break;
-
     default:
-        // 默认或错误处理
         break;
     }
 }
@@ -367,7 +364,6 @@ void SettingsPage::createWiFiHotspot()
 {
     if (isHotspotActive)
     {
-        // 关闭热点
         QProcess process;
         QString command = "sudo nmcli device disconnect wlan0";
         process.start(command);
@@ -405,32 +401,92 @@ void SettingsPage::createWiFiHotspot()
     saveCurrentConfig();
 }
 
+void SettingsPage::restoreDefaultConfig()
+{
+    QJsonObject defaultConfig;
+    defaultConfig["resolution/index"] = 0;
+    defaultConfig["capture/interval"] = 60;
+    defaultConfig["network/hotspot"] = false;
+
+    resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
+    slot_resolutionChanged(0);
+    photoIntervalButton->setText("摄影间隔时间: 1分钟 >");
+    isHotspotActive = false;
+    wifiHotspotButton->setText("Wi-Fi 热点: 关 >");
+
+    QRadioButton *res720p = resolutionSelectionPage->findChild<QRadioButton *>("res720pButton");
+    QRadioButton *res1080p = resolutionSelectionPage->findChild<QRadioButton *>("res1080pButton");
+    res720p->setChecked(true);
+    res1080p->setChecked(false);
+
+    QRadioButton *oneMin = photoIntervalPage->findChild<QRadioButton *>("oneMinButton");
+    QRadioButton *threeMin = photoIntervalPage->findChild<QRadioButton *>("threeMinButton");
+    QRadioButton *fiveMin = photoIntervalPage->findChild<QRadioButton *>("fiveMinButton");
+    QRadioButton *tenMin = photoIntervalPage->findChild<QRadioButton *>("tenMinButton");
+    oneMin->setChecked(true);
+    threeMin->setChecked(false);
+    fiveMin->setChecked(false);
+    tenMin->setChecked(false);
+
+    QRadioButton *onBtn = startupWifiPage->findChild<QRadioButton *>("onButton");
+    QRadioButton *offBtn = startupWifiPage->findChild<QRadioButton *>("offButton");
+    offBtn->setChecked(true);
+    onBtn->setChecked(false);
+
+    saveCurrentConfig();
+}
+
 void SettingsPage::loadInitialConfig()
 {
-    QFile file("config.json");
+    QFile file("/mnt/myvideo/config.json");
     if (file.open(QIODevice::ReadOnly | QIODevice::Text))
     {
         QByteArray data = file.readAll();
         QJsonDocument doc = QJsonDocument::fromJson(data);
         QJsonObject obj = doc.object();
 
-        // 分辨率
-        int resIndex = obj["resolution/index"].toInt(0); // 没有文件默认值为0
-        slot_resolutionChanged(resIndex);
+        int resIndex = obj["resolution/index"].toInt(0);
+        QRadioButton *res720p = resolutionSelectionPage->findChild<QRadioButton *>("res720pButton");
+        QRadioButton *res1080p = resolutionSelectionPage->findChild<QRadioButton *>("res1080pButton");
 
-        // 摄影间隔
+        if (res720p && res1080p)
+        {
+            res720p->setChecked(resIndex == 0);
+            res1080p->setChecked(resIndex == 1);
+            resolutionSelectionButton->setText(resIndex ? "分辨率: 1920x1080 30FPS >" : "分辨率: 1280x720 30FPS >");
+            slot_resolutionChanged(resIndex);
+        }
+
         int interval = obj["capture/interval"].toInt(60);
         photoIntervalButton->setText(QString("摄影间隔时间: %1分钟 >").arg(interval / 60));
+        QRadioButton *oneMin = photoIntervalPage->findChild<QRadioButton *>("oneMinButton");
+        QRadioButton *threeMin = photoIntervalPage->findChild<QRadioButton *>("threeMinButton");
+        QRadioButton *fiveMin = photoIntervalPage->findChild<QRadioButton *>("fiveMinButton");
+        QRadioButton *tenMin = photoIntervalPage->findChild<QRadioButton *>("tenMinButton");
+        if (oneMin)
+            oneMin->setChecked(interval == 60);
+        if (threeMin)
+            threeMin->setChecked(interval == 180);
+        if (fiveMin)
+            fiveMin->setChecked(interval == 300);
+        if (tenMin)
+            tenMin->setChecked(interval == 600);
 
-        // WiFi热点状态
         isHotspotActive = obj["network/hotspot"].toBool(false);
         wifiHotspotButton->setText(QString("Wi-Fi 热点: %1 >").arg(isHotspotActive ? "开" : "关"));
+        QRadioButton *onBtn = startupWifiPage->findChild<QRadioButton *>("onButton");
+        QRadioButton *offBtn = startupWifiPage->findChild<QRadioButton *>("offButton");
+        if (onBtn && offBtn)
+        {
+            onBtn->setChecked(isHotspotActive);
+            offBtn->setChecked(!isHotspotActive);
+        }
 
         file.close();
     }
     else
     {
-        qDebug() << "open error";
+        restoreDefaultConfig();
     }
 }
 
@@ -438,10 +494,7 @@ QJsonObject SettingsPage::generateConfig()
 {
     QJsonObject obj;
 
-    // 分辨率
     obj["resolution/index"] = resolutionSelectionButton->text().contains("1280") ? 0 : 1;
-
-    // 摄影间隔
     QRegularExpression re("(\\d+)分");
     QRegularExpressionMatch match = re.match(photoIntervalButton->text());
     if (match.hasMatch())
@@ -451,10 +504,9 @@ QJsonObject SettingsPage::generateConfig()
     }
     else
     {
-        obj["capture/interval"] = 60; // 默认1分钟
+        obj["capture/interval"] = 60;
     }
 
-    // 热点状态
     obj["network/hotspot"] = isHotspotActive;
 
     return obj;
@@ -463,9 +515,8 @@ QJsonObject SettingsPage::generateConfig()
 void SettingsPage::saveCurrentConfig()
 {
     QJsonObject obj = generateConfig();
-
     QJsonDocument doc(obj);
-    QFile file("config.json");
+    QFile file("/mnt/myvideo/config.json");
 
     if (file.open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -480,11 +531,10 @@ void SettingsPage::saveCurrentConfig()
         qDebug() << "Failed to open file:" << file.errorString();
     }
 
-    emit configUpdated(obj); // 直接发射 QJsonObject 类型的参数
+    emit configUpdated(obj);
 }
 
 void SettingsPage::onConfigUpdated(const QJsonObject &config)
 {
-    // 处理配置更新事件
     qDebug() << "Config updated:" << config;
 }
