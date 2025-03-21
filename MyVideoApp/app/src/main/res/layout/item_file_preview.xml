@@ -12,6 +12,13 @@
         android:contentDescription="@string/app_name"/>
 
     <TextView
+        android:id="@+id/duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="@android:color/black"/>
+
+    <TextView
         android:id="@+id/file_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
