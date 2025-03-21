@@ -247,12 +247,6 @@ public class LocalFilesFragment extends Fragment {
         }.execute();
     }
 
-    private boolean shouldAddFile(boolean isVideo) {
-        return currentType == FileType.ALL ||
-                (currentType == FileType.VIDEO && isVideo) ||
-                (currentType == FileType.IMAGE && !isVideo);
-    }
-
     private void enterSelectMode() {
         isSelectMode = true;
         selectionActionBar.setVisibility(View.VISIBLE);

@@ -1,11 +1,13 @@
 package com.example.myvideoapp;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -29,6 +31,7 @@ public class SettingsFragment extends Fragment {
         setupResolutionSpinner(view);
         setupIntervalSpinner(view);
         loadConfigAndSetSpinner(view);
+        setupResetButton(view);
         isInitialized = true;
         return view;
     }
@@ -126,5 +129,46 @@ public class SettingsFragment extends Fragment {
         // 恢复监听器
         resolutionSpinner.setOnItemSelectedListener(resolutionListener);
         intervalSpinner.setOnItemSelectedListener(intervalListener);
+    }
+
+    private void setupResetButton(View view) {
+        Button resetButton = view.findViewById(R.id.resetButton);
+        resetButton.setOnClickListener(v -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle("确认恢复出厂设置")
+                    .setMessage("你确定要恢复出厂设置吗？")
+                    .setPositiveButton("确定", (dialog, which) -> {
+                        if (mainFragment != null) {
+                            // 发送恢复出厂设置命令
+                            String command = "reset:factory";
+                            mainFragment.sendCommandToQt(command);
+
+                            // 设置分辨率为 1280p
+                            setSpinnerResolutionTo1280p(view);
+                            // 设置摄影间隔为 1 分钟
+                            setSpinnerIntervalTo1Minute(view);
+                        }
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+        });
+    }
+
+    private void setSpinnerResolutionTo1280p(View view) {
+        Spinner resolutionSpinner = view.findViewById(R.id.spinnerResolution);
+        ArrayAdapter<CharSequence> resolutionAdapter = (ArrayAdapter<CharSequence>) resolutionSpinner.getAdapter();
+        int resPos = resolutionAdapter.getPosition("1280p");
+        if (resPos != -1) {
+            resolutionSpinner.setSelection(resPos, false);
+        }
+    }
+
+    private void setSpinnerIntervalTo1Minute(View view) {
+        Spinner intervalSpinner = view.findViewById(R.id.spinnerPhotoInterval);
+        ArrayAdapter<CharSequence> intervalAdapter = (ArrayAdapter<CharSequence>) intervalSpinner.getAdapter();
+        int intervalPos = intervalAdapter.getPosition("1分钟");
+        if (intervalPos != -1) {
+            intervalSpinner.setSelection(intervalPos, false);
+        }
     }
 }

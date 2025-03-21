@@ -105,7 +105,6 @@ void SettingsPage::readData()
         QRadioButton *res720p = resolutionSelectionPage->findChild<QRadioButton *>("res720pButton");
         QRadioButton *res1080p = resolutionSelectionPage->findChild<QRadioButton *>("res1080pButton");
         QString res = data.split(":")[1];
-        qDebug() << "res:" << res;
 
         res720p->setChecked(res == "1280p\n");
         res1080p->setChecked(res == "1920p\n");
@@ -115,7 +114,6 @@ void SettingsPage::readData()
     else if (data.startsWith("interval:"))
     {
         QString res = data.split(":")[1];
-        qDebug() << "res:" << res;
         QRadioButton *oneMin = photoIntervalPage->findChild<QRadioButton *>("oneMinButton");
         QRadioButton *threeMin = photoIntervalPage->findChild<QRadioButton *>("threeMinButton");
         QRadioButton *fiveMin = photoIntervalPage->findChild<QRadioButton *>("fiveMinButton");
@@ -148,6 +146,11 @@ void SettingsPage::readData()
         tenMin->setChecked(interval == 600);
 
         emit photoIntervalChanged(interval);
+    }
+    else if (data == "reset:factory\n")
+    {
+        restoreDefaultConfig();
+        return;
     }
     else if (data == "SAVE_IMAGE\n")
     {
