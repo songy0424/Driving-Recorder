@@ -67,24 +67,17 @@ import jcifs.smb.SmbFile;
 import jcifs.smb.SmbFileInputStream;
 
 public class LocalFilesFragment extends Fragment {
-    // 修改SMB基础路径和子目录
     private static final String SMB_BASE_URL = "smb://192.168.1.1/SharedFolder/";
     private static final String VIDEO_SUB_PATH = "Video/";
     private static final String IMAGE_SUB_PATH = "Picture/";
-    private enum DisplayMode {
-        DEVICE, // 显示SMB设备文件
-        LOCAL   // 显示本地文件
-    }
+    private enum DisplayMode {DEVICE, LOCAL}
     private DisplayMode currentMode = DisplayMode.DEVICE;
-    private boolean canDownload = true; // 是否允许下载
-    // 修改文件类型判断逻辑
+    private boolean canDownload = true;
     private boolean isVideoFile(String path) {
-        return path.contains(VIDEO_SUB_PATH); // 根据路径包含关系判断
+        return path.contains(VIDEO_SUB_PATH);
     }
     private static final int REQUEST_STORAGE_PERMISSION = 100;
-    private enum FileType {
-        ALL, VIDEO, IMAGE
-    }
+    private enum FileType {ALL, VIDEO, IMAGE}
     private GridView gridView;
     private FileAdapter adapter;
     private List<FileItem> fileItems = new ArrayList<>();
@@ -96,10 +89,11 @@ public class LocalFilesFragment extends Fragment {
     private Map<String, Bitmap> thumbnailCache = new HashMap<>();
     private ProgressDialog progressDialog;
     private Button selectAllBtn;
-    Button localFileBtn ;
-    TextView titleText;
+    private Button localFileBtn;
+    private TextView titleText;
+
     private void toggleFileSource() {
-        currentMode = (currentMode == DisplayMode.DEVICE) ? DisplayMode.LOCAL : DisplayMode.DEVICE;
+        currentMode = currentMode == DisplayMode.DEVICE ? DisplayMode.LOCAL : DisplayMode.DEVICE;
         updateUIForCurrentMode();
         loadFiles();
     }
@@ -107,17 +101,15 @@ public class LocalFilesFragment extends Fragment {
     private void updateUIForCurrentMode() {
         titleText.setText(currentMode == DisplayMode.DEVICE ? "设备文件" : "本地文件");
         localFileBtn.setText(currentMode == DisplayMode.DEVICE ? "本地文件" : "设备文件");
-        canDownload = (currentMode == DisplayMode.DEVICE);
+        canDownload = currentMode == DisplayMode.DEVICE;
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_local_files, container, false);
-
         initializeViews(view);
         setupAdapter();
         loadFiles();
-
         return view;
     }
 
@@ -131,8 +123,9 @@ public class LocalFilesFragment extends Fragment {
         Button btnCancel = view.findViewById(R.id.btn_cancel);
         Button btnConfirm = view.findViewById(R.id.btn_confirm);
         localFileBtn = view.findViewById(R.id.local_file_btn);
-        localFileBtn.setOnClickListener(v -> toggleFileSource());
         titleText = view.findViewById(R.id.title_text);
+
+        localFileBtn.setOnClickListener(v -> toggleFileSource());
         selectBtn.setOnClickListener(v -> toggleSelectMode());
         videoBtn.setOnClickListener(v -> filterFiles(FileType.VIDEO));
         imageBtn.setOnClickListener(v -> filterFiles(FileType.IMAGE));
@@ -153,16 +146,13 @@ public class LocalFilesFragment extends Fragment {
 
     private void toggleSelectMode() {
         isSelectMode = !isSelectMode;
-
         if (isSelectMode) {
-            // 进入选择模式时清空历史选中项
             selectedItems.clear();
             selectAllBtn.setVisibility(View.VISIBLE);
             selectAllBtn.setText("全选");
         } else {
             exitSelectMode();
         }
-
         updateSelectionState();
     }
 
@@ -194,25 +184,24 @@ public class LocalFilesFragment extends Fragment {
         updateSelectedCount();
         adapter.notifyDataSetChanged();
     }
+
     private void toggleSelectAll() {
         if (selectedItems.size() == fileItems.size()) {
-            // 全不选
             selectedItems.clear();
             selectAllBtn.setText("全选");
         } else {
-            // 全选
             selectedItems.addAll(fileItems);
             selectAllBtn.setText("全不选");
         }
         adapter.notifyDataSetChanged();
         updateSelectedCount();
     }
+
     private void filterFiles(FileType type) {
         currentType = type;
         loadFiles();
     }
 
-    // 修改文件加载方法
     @SuppressLint("StaticFieldLeak")
     private void loadFiles() {
         new AsyncTask<Void, Void, List<FileItem>>() {
@@ -221,14 +210,10 @@ public class LocalFilesFragment extends Fragment {
                 List<FileItem> items = new ArrayList<>();
                 try {
                     if (currentMode == DisplayMode.DEVICE) {
-                        String subPath = currentType == FileType.VIDEO ? VIDEO_SUB_PATH :
-                                currentType == FileType.IMAGE ? IMAGE_SUB_PATH : "";
+                        String subPath = currentType == FileType.VIDEO ? VIDEO_SUB_PATH : IMAGE_SUB_PATH;
                         SmbFile smbDir = new SmbFile(SMB_BASE_URL + subPath);
-
-                        // 修改文件遍历逻辑
                         List<SmbFile> fileList = Arrays.asList(smbDir.listFiles());
 
-                        // 先排序SMB文件
                         Collections.sort(fileList, (f1, f2) -> {
                             try {
                                 return Long.compare(
@@ -242,17 +227,15 @@ public class LocalFilesFragment extends Fragment {
 
                         // 转换排序后的文件列表
                         for (SmbFile file : fileList) {
-                            String fullPath = file.getPath();
                             String name = file.getName();
-                            boolean isVideo = isVideoFile(fullPath);
+                            boolean isVideo = isVideoFile(file.getPath());
                             long timestamp = parseTimestampFromName(name);
-                            items.add(new FileItem(name, fullPath, isVideo, timestamp,false));
+                            items.add(new FileItem(name, file.getPath(), isVideo, timestamp, false));
                         }
                     } else {
-                        String subPath = currentType == FileType.VIDEO ? VIDEO_SUB_PATH :
-                                currentType == FileType.IMAGE ? IMAGE_SUB_PATH : "";
-                        File fileDir = new File(getLocalStorageRoot(), subPath);
-                        loadLocalDirectory(fileDir, items, currentType == FileType.VIDEO);  // 加载视频文件
+                        String subPath = currentType == FileType.VIDEO ? VIDEO_SUB_PATH : IMAGE_SUB_PATH;
+                        File localDir = new File(getLocalStorageRoot(), subPath);
+                        loadLocalDirectory(localDir, items, currentType == FileType.VIDEO);
                     }
                 } catch (Exception e) {
                     Log.e("FileLoad", "Error loading files", e);
@@ -286,6 +269,7 @@ public class LocalFilesFragment extends Fragment {
                     }
                 }
             }
+
             @Override
             protected void onPostExecute(List<FileItem> items) {
                 fileItems.clear();
@@ -307,7 +291,6 @@ public class LocalFilesFragment extends Fragment {
         isSelectMode = false;
         selectionActionBar.setVisibility(View.GONE);
         selectAllBtn.setVisibility(View.GONE);
-        selectAllBtn.setText("全选"); // 重置按钮文字
         adapter.clearSelections();
     }
 
@@ -318,13 +301,12 @@ public class LocalFilesFragment extends Fragment {
     }
 
     private void playVideo(FileItem item) {
-        String path = item.path;
         new Thread(() -> {
             try {
                 File localFile = getLocalFile(item);
                 if (!localFile.exists()) {
-                    showDownloadProgress("正在下载视频文件...");
-                    SmbFile smbFile = new SmbFile(path);
+                    showDownloadProgress("下载中...");
+                    SmbFile smbFile = new SmbFile(item.path);
                     copySmbToLocalWithProgress(smbFile, localFile);
                     dismissDownloadProgress();
                 }
@@ -334,34 +316,31 @@ public class LocalFilesFragment extends Fragment {
                         .setDataAndType(uri, "video/*")
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
             } catch (Exception e) {
-                showError("无法播放视频");
+                dismissDownloadProgress();
+                showError("播放失败");
             }
         }).start();
     }
 
     private void previewImage(FileItem item) {
-        String path = item.path;
         new Thread(() -> {
             try {
                 File localFile = getLocalFile(item);
                 if (!localFile.exists()) {
-                    showToast("正在下载图片文件，请稍候...");
-                    SmbFile smbFile = new SmbFile(path);
+                    SmbFile smbFile = new SmbFile(item.path);
                     copySmbToLocal(smbFile, localFile);
                 }
                 startActivity(new Intent(requireContext(), ImageViewerActivity.class)
                         .putExtra("image_path", localFile.getAbsolutePath()));
             } catch (Exception e) {
-                showError("无法查看图片");
+                showError("预览失败");
             }
         }).start();
     }
 
     private File getLocalFile(FileItem item) {
-        File baseDir = new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                "My Video/" + (item.isVideo ? "Video" : "Picture")
-        );
+        File baseDir = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS), "My Video/" + (item.isVideo ? "Video" : "Picture"));
         if (!baseDir.exists()) {
             baseDir.mkdirs();
         }
@@ -388,23 +367,23 @@ public class LocalFilesFragment extends Fragment {
 
     private void dismissDownloadProgress() {
         runOnUiThread(() -> {
-            if (progressDialog != null && progressDialog.isShowing()) {
+            if (progressDialog != null) {
                 progressDialog.dismiss();
             }
         });
     }
 
     private void copySmbToLocalWithProgress(SmbFile smbFile, File localFile) throws IOException {
-        long fileLength = smbFile.length();
+        long fileSize = smbFile.length();
         try (InputStream in = new SmbFileInputStream(smbFile);
              OutputStream out = new FileOutputStream(localFile)) {
             byte[] buffer = new byte[4096];
             int len;
-            long totalBytesRead = 0;
+            long total = 0;
             while ((len = in.read(buffer)) > 0) {
                 out.write(buffer, 0, len);
-                totalBytesRead += len;
-                int progress = (int) ((totalBytesRead * 100) / fileLength);
+                total += len;
+                int progress = (int) (total * 100 / fileSize);
                 updateDownloadProgress(progress);
             }
         }
@@ -418,27 +397,20 @@ public class LocalFilesFragment extends Fragment {
         try (InputStream in = new SmbFileInputStream(smbFile);
              OutputStream out = new FileOutputStream(localFile)) {
             byte[] buffer = new byte[4096];
-            int len;
-            while ((len = in.read(buffer)) > 0) {
-                out.write(buffer, 0, len);
+            while (in.read(buffer) > 0) {
+                out.write(buffer);
             }
         }
     }
 
     private void showActionDialog() {
-        String[] actions;
-        if (currentMode == DisplayMode.DEVICE) {
-            actions = new String[]{"下载到本地", "删除文件"};
-        } else {
-            actions = new String[]{"删除文件"};
-        }
-
+        String[] actions = currentMode == DisplayMode.DEVICE ?
+                new String[]{"下载到本地", "删除文件"} : new String[]{"删除文件"};
         new AlertDialog.Builder(requireContext())
-                .setTitle("请选择操作")
+                .setTitle("操作")
                 .setItems(actions, (dialog, which) -> {
-                    if (currentMode == DisplayMode.DEVICE) {
-                        if (which == 0) checkStoragePermission();
-                        else confirmDelete();
+                    if (currentMode == DisplayMode.DEVICE && which == 0) {
+                        checkStoragePermission();
                     } else {
                         confirmDelete();
                     }
@@ -448,7 +420,7 @@ public class LocalFilesFragment extends Fragment {
 
     private void confirmDelete() {
         new AlertDialog.Builder(requireContext())
-                .setMessage("确定要删除选中的 " + selectedItems.size() + " 个文件吗？")
+                .setMessage("确定删除选中的" + selectedItems.size() + "个文件？")
                 .setPositiveButton("删除", (d, w) -> deleteSelectedFiles())
                 .setNegativeButton("取消", null)
                 .show();
@@ -463,18 +435,11 @@ public class LocalFilesFragment extends Fragment {
                 for (FileItem item : selectedItems) {
                     try {
                         if (currentMode == DisplayMode.DEVICE) {
-                            SmbFile smbFile = new SmbFile(item.path);
-                            if (smbFile.exists()) {
-                                smbFile.delete();
-                                count++;
-                            }
+                            new SmbFile(item.path).delete();
                         } else {
-                            // 本地文件删除
-                            File localFile = new File(item.path);
-                            if (localFile.exists() && localFile.delete()) {
-                                count++;
-                            }
+                            new File(item.path).delete();
                         }
+                        count++;
                     } catch (Exception e) {
                         Log.e("Delete", "删除失败: " + item.name, e);
                     }
@@ -484,7 +449,7 @@ public class LocalFilesFragment extends Fragment {
 
             @Override
             protected void onPostExecute(Integer count) {
-                showToast("成功删除 " + count + " 个文件");
+                showToast("成功删除" + count + "个文件");
                 loadFiles();
             }
         }.execute();
@@ -669,30 +634,60 @@ public class LocalFilesFragment extends Fragment {
 
         private class ViewHolder {
             ImageView image, videoIcon;
-            TextView name;
+            TextView name, duration;
             CheckBox checkbox;
 
             ViewHolder(View view) {
                 image = view.findViewById(R.id.preview_image);
                 name = view.findViewById(R.id.file_name);
+                duration = view.findViewById(R.id.file_duration);
                 checkbox = view.findViewById(R.id.selection_checkbox);
                 videoIcon = view.findViewById(R.id.video_icon);
             }
 
             void bind(FileItem item, boolean isSelectMode, boolean isSelected) {
-                // 在加载新图片之前清空旧的图片
                 image.setImageDrawable(null);
                 name.setText(item.name);
                 videoIcon.setVisibility(item.isVideo ? View.VISIBLE : View.GONE);
                 checkbox.setVisibility(isSelectMode ? View.VISIBLE : View.GONE);
                 checkbox.setChecked(isSelected);
-                // 添加自动状态同步
-                if (selectedItems.size() == fileItems.size()) {
-                    selectAllBtn.setText("全不选");
+
+                // 仅本地视频显示时长
+                if (item.isVideo && item.isLocalFile) {
+                    duration.setVisibility(View.VISIBLE);
+                    loadVideoDuration(item);
+                } else {
+                    duration.setVisibility(View.GONE);
                 }
+
+                // 加载缩略图
                 loadThumbnail(item);
             }
-
+            private String formatDuration(long durationMs) {
+                long totalSec = durationMs / 1000;
+                long minutes = totalSec / 60;
+                long seconds = totalSec % 60;
+                return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
+            }
+            void loadVideoDuration(FileItem item) {
+                new Thread(() -> {
+                    try {
+                        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+                        retriever.setDataSource(item.path); // 本地文件直接读取
+                        String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+                        if (durationStr != null) {
+                            long durationMs = Long.parseLong(durationStr);
+                            final String formatted = formatDuration(durationMs);
+                            runOnUiThread(() -> duration.setText(formatted));
+                        } else {
+                            runOnUiThread(() -> duration.setText("未知"));
+                        }
+                    } catch (Exception e) {
+                        Log.e("Duration", "时长获取失败: " + item.path, e);
+                        runOnUiThread(() -> duration.setText("未知"));
+                    }
+                }).start();
+            }
             void loadThumbnail(FileItem item) {
                 if (thumbnailCache.containsKey(item.path)) {
                     image.setImageBitmap(thumbnailCache.get(item.path));
@@ -731,6 +726,7 @@ public class LocalFilesFragment extends Fragment {
                             thumbnailCache.put(path, bitmap);
                             image.setImageBitmap(bitmap);
                         });
+                        
                     } catch (Exception e) {
                         setErrorImage();
                     }
@@ -788,7 +784,6 @@ public class LocalFilesFragment extends Fragment {
         }
     }
 
-    // Helper方法
     private void runOnUiThread(Runnable action) {
         new Handler(Looper.getMainLooper()).post(action);
     }
@@ -801,13 +796,13 @@ public class LocalFilesFragment extends Fragment {
         runOnUiThread(() -> Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show());
     }
 
-    // FileItem类
     private static class FileItem {
         String name;
         String path;
         boolean isVideo;
         long timestamp;
         boolean isLocalFile;
+
         FileItem(String name, String path, boolean isVideo, long timestamp, boolean isLocalFile) {
             this.name = name;
             this.path = path;
@@ -816,12 +811,12 @@ public class LocalFilesFragment extends Fragment {
             this.isLocalFile = isLocalFile;
         }
     }
+
     private File getLocalStorageRoot() {
-        return new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                "My Video"
-        );
+        return new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS), "My Video");
     }
+
     private long parseTimestampFromName(String fileName) {
         try {
             String timeStr = fileName.substring(0, 15);
@@ -829,7 +824,7 @@ public class LocalFilesFragment extends Fragment {
             Date date = sdf.parse(timeStr);
             return date != null ? date.getTime() : 0;
         } catch (Exception e) {
-            return 0; // 解析失败返回0
+            return 0;
         }
     }
 

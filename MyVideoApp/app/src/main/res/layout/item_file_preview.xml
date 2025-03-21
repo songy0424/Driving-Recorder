@@ -12,11 +12,11 @@
         android:contentDescription="@string/app_name"/>
 
     <TextView
-        android:id="@+id/duration"
-        android:layout_width="wrap_content"
+        android:id="@+id/file_duration"
+        android:layout_width="78dp"
         android:layout_height="wrap_content"
-        android:textSize="12sp"
-        android:textColor="@android:color/black"/>
+        android:textColor="@android:color/black"
+        android:textSize="12sp" />
 
     <TextView
         android:id="@+id/file_name"
@@ -26,7 +26,7 @@
         android:background="#80000000"
         android:ellipsize="end"
         android:maxLines="1"
-        android:textSize="10sp"
+        android:textSize="9sp"
         android:lineSpacingExtra="2dp"
         android:padding="4dp"
         android:textColor="#FFFFFF"/>
