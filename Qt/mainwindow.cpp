@@ -122,20 +122,20 @@ void MainWindow::processFrame()
 {
     cv::Mat tmpframe;
     cv::Mat frame;
-    if (camera->grabFrame(tmpframe))
+    if (camera->grabFrame(frame))
     {
 
-        frame = applyCLAHEAndSharpening(tmpframe);
-        if (frame.empty())
-        {
-            qDebug() << "applySharpening 返回空矩阵！";
-            return;
-        }
-
+        // frame = applyCLAHEAndSharpening(tmpframe);
         addTimestamp(frame);
         if (appsrc)
         {
-            GstBuffer *buffer = gst_buffer_new_allocate(nullptr, frame.total() * frame.elemSize(), nullptr);
+            GstBuffer *buffer = gst_buffer_new_wrapped_full(GST_MEMORY_FLAG_READONLY,
+                                                            frame.data,
+                                                            frame.total() * frame.elemSize(),
+                                                            0,
+                                                            frame.total() * frame.elemSize(),
+                                                            nullptr,
+                                                            nullptr);
 
             GstMapInfo map;
             gst_buffer_map(buffer, &map, GST_MAP_WRITE);
@@ -385,8 +385,9 @@ void MainWindow::startRTSPServer(const QString &ipAddress)
     const gchar *launch =
         "appsrc name=mysrc is-live=true format=time ! "
         "videoconvert ! nvvidconv ! "
-        "nvv4l2h264enc insert-sps-pps=true insert-vui=true ! h264parse ! "
-        "rtph264pay config-interval=1 name=pay0 pt=96";
+        "nvv4l2h264enc preset-level=1 bitrate=4000000 insert-sps-pps=true insert-vui=true ! "
+        "h264parse config-interval=1 ! "
+        "rtph264pay config-interval=1 name=pay0 pt=96 max-nals-per-socket=1";
 
     // 关键修改：通过媒体对象获取管道
     gst_rtsp_media_factory_set_launch(factory, launch);
@@ -438,7 +439,7 @@ void MainWindow::media_configure(GstRTSPMediaFactory *factory,
                                             "format", G_TYPE_STRING, "BGR",
                                             "width", G_TYPE_INT, self->width,
                                             "height", G_TYPE_INT, self->height,
-                                            "framerate", GST_TYPE_FRACTION, 30, 1,
+                                            "framerate", GST_TYPE_FRACTION, self->frameRate, 1,
                                             nullptr);
         g_object_set(appsrc,
                      "caps", caps,
