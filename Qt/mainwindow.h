@@ -63,6 +63,7 @@ private:
     QIcon settingIcon;
     bool isSaveImage;
     bool isRecordVideo;
+    cv::Mat bgrFrame;
     cv::VideoWriter videorecord;
     SettingsPage *settingsPage; // 设置页面的指针
     GstElement *appsrc;

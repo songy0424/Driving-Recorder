@@ -9,6 +9,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudafilters.hpp>
+#include <QtConcurrent/QtConcurrent>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           ui(new Ui::MainWindow),
@@ -122,10 +123,14 @@ void MainWindow::processFrame()
 {
     cv::Mat tmpframe;
     cv::Mat frame;
-    if (camera->grabFrame(frame))
+    // QTime startTime = QTime::currentTime(); // 记录开始时间
+    static int k = 0;
+    static double elapsedTime10 = 0;
+    if (camera->grabFrame(tmpframe))
     {
+        QTime startTime = QTime::currentTime(); // 记录开始时间
 
-        // frame = applyCLAHEAndSharpening(tmpframe);
+        frame = applyCLAHEAndSharpening(tmpframe);
         addTimestamp(frame);
         if (appsrc)
         {
@@ -155,10 +160,13 @@ void MainWindow::processFrame()
             //     if (ret)
             //         qDebug() << "Push buffer error";
         }
-
         // 对帧进行算法操作
-        QImage qImage(frame.data, frame.cols, frame.rows, static_cast<int>(frame.step), QImage::Format_RGB888);
-        QImage swappedImage = qImage.rgbSwapped(); // 原本帧是RGB格式，经过函数后编程BGR格式
+        // QFuture<QImage> future = QtConcurrent::run(this, &MainWindow::convertToQImage, frame);
+
+        // QImage swappedImage = future.result();
+
+        cv::cvtColor(frame, bgrFrame, cv::COLOR_RGB2BGR); // 确保颜色空间转换正确
+        QImage swappedImage(bgrFrame.data, bgrFrame.cols, bgrFrame.rows, static_cast<int>(bgrFrame.step), QImage::Format_RGB888);
 
         // 将处理后的帧显示在QLabel上
         displayFrameOnLabel(swappedImage);
@@ -173,18 +181,33 @@ void MainWindow::processFrame()
         {
             slot_SaveVideo(frame); // 将原始帧保存到视频文件
         }
+        QTime endTime = QTime::currentTime();            // 记录结束时间
+        double elapsedTime = startTime.msecsTo(endTime); // 计算时间差（毫秒）
+        elapsedTime10 += elapsedTime;
+        k++;
+        if (k % 10 == 0)
+        {
+            k = 0;
+            elapsedTime10 = elapsedTime10 / 10;
+            // 输出运行时间
+            qDebug() << "processFrame elapsed time:" << elapsedTime << "ms";
+            elapsedTime10 = 0;
+        }
     }
 }
 
 cv::Mat MainWindow::applyCLAHEAndSharpening(const cv::Mat &frame)
 {
+    QTime startTime = QTime::currentTime(); // 记录开始时间
+    static int k = 0;
+    static double elapsedTime10 = 0;
     // 检查 CUDA 是否可用
     if (cv::cuda::getCudaEnabledDeviceCount() == 0)
     {
         qDebug() << "CUDA未启用！\n";
         return frame.clone();
     }
-
+    // cv::cuda::HostMem hostMem(frame, cv::cuda::HostMem::PAGE_LOCKED);
     gpu_frame.upload(frame);
 
     // 分离通道
@@ -195,30 +218,47 @@ cv::Mat MainWindow::applyCLAHEAndSharpening(const cv::Mat &frame)
     clahe_gpu->apply(bgr_planes_gpu[1], green_clahe_gpu);
     clahe_gpu->apply(bgr_planes_gpu[2], red_clahe_gpu);
 
-    // 应用拉普拉斯滤波
-    laplacian_filter_gpu->apply(blue_clahe_gpu, blue_laplacian_gpu);
-    laplacian_filter_gpu->apply(green_clahe_gpu, green_laplacian_gpu);
-    laplacian_filter_gpu->apply(red_clahe_gpu, red_laplacian_gpu);
+    // // 应用拉普拉斯滤波
+    // laplacian_filter_gpu->apply(blue_clahe_gpu, blue_laplacian_gpu);
+    // laplacian_filter_gpu->apply(green_clahe_gpu, green_laplacian_gpu);
+    // laplacian_filter_gpu->apply(red_clahe_gpu, red_laplacian_gpu);
 
-    // 锐化处理
-    cv::cuda::addWeighted(blue_clahe_gpu, 1.0, blue_laplacian_gpu, -1.5, 0, blue_sharpened_gpu, CV_8U);
-    cv::cuda::addWeighted(green_clahe_gpu, 1.0, green_laplacian_gpu, -1.5, 0, green_sharpened_gpu, CV_8U);
-    cv::cuda::addWeighted(red_clahe_gpu, 1.0, red_laplacian_gpu, -1.5, 0, red_sharpened_gpu, CV_8U);
+    // // 锐化处理
+    // cv::cuda::addWeighted(blue_clahe_gpu, 1.0, blue_laplacian_gpu, -1.5, 0, blue_sharpened_gpu, CV_8U);
+    // cv::cuda::addWeighted(green_clahe_gpu, 1.0, green_laplacian_gpu, -1.5, 0, green_sharpened_gpu, CV_8U);
+    // cv::cuda::addWeighted(red_clahe_gpu, 1.0, red_laplacian_gpu, -1.5, 0, red_sharpened_gpu, CV_8U);
 
-    // 合并通道
-    clahe_planes_gpu[0] = blue_sharpened_gpu;
-    clahe_planes_gpu[1] = green_sharpened_gpu;
-    clahe_planes_gpu[2] = red_sharpened_gpu;
+    // // 合并通道
+    // clahe_planes_gpu[0] = blue_sharpened_gpu;
+    // clahe_planes_gpu[1] = green_sharpened_gpu;
+    // clahe_planes_gpu[2] = red_sharpened_gpu;
+
+    clahe_planes_gpu[0] = blue_clahe_gpu;
+    clahe_planes_gpu[1] = green_clahe_gpu;
+    clahe_planes_gpu[2] = red_clahe_gpu;
     cv::cuda::merge(clahe_planes_gpu, clahe_image_gpu);
 
     clahe_image_gpu.download(sharpened);
+
+    QTime endTime = QTime::currentTime();            // 记录结束时间
+    double elapsedTime = startTime.msecsTo(endTime); // 计算时间差（毫秒）
+    elapsedTime10 += elapsedTime;
+    k++;
+    if (k % 10 == 0)
+    {
+        k = 0;
+        elapsedTime10 = elapsedTime10 / 10;
+        // 输出运行时间
+        qDebug() << "CLAHE time:" << elapsedTime << "ms";
+        elapsedTime10 = 0;
+    }
     return !sharpened.empty() ? sharpened : cv::Mat();
 }
 
 void MainWindow::displayFrameOnLabel(const QImage &qImage)
 {
     QPixmap pixmap = QPixmap::fromImage(qImage);
-    QPixmap scaledPixmap = pixmap.scaled(ui->imageLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QPixmap scaledPixmap = pixmap.scaled(ui->imageLabel->size(), Qt::KeepAspectRatio, Qt::FastTransformation);
     ui->imageLabel->setPixmap(scaledPixmap);
     updateTime();
 }
