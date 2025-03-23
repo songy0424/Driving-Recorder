@@ -120,20 +120,20 @@ void MainWindow::processFrame()
     if (camera->grabFrame(tmpframe))
     {
         // 应用CLAHE
-        // frame = applyCLAHE(frame);
+        frame = applyCLAHE(tmpframe);
         // 应用锐化
-        frame = applySharpening(tmpframe);
+        // frame = applySharpening(tmpframe);
         if (frame.empty())
         {
             qDebug() << "applySharpening 返回空矩阵！";
             return;
         }
-        cv::cvtColor(frame, frame_3channel, cv::COLOR_GRAY2BGR);
-        if (frame_3channel.empty())
-        {
-            qDebug() << "单通道图像转换为 3 通道图像失败！";
-            return;
-        }
+        // cv::cvtColor(frame, frame_3channel, cv::COLOR_GRAY2BGR);
+        // if (frame_3channel.empty())
+        // {
+        //     qDebug() << "单通道图像转换为 3 通道图像失败！";
+        //     return;
+        // }
 
         addTimestamp(frame);
         if (appsrc)
@@ -162,18 +162,17 @@ void MainWindow::processFrame()
         // {
         //     qDebug() << "can not open src";
         // }
-        QImage qImage(frame_3channel.data, frame_3channel.cols, frame_3channel.rows, static_cast<int>(frame_3channel.step), QImage::Format_RGB888);
-        if (qImage.isNull())
-        {
-            qDebug() << "QImage 创建失败！数据指针: " << frame_3channel.data
-                     << ", 宽度: " << frame_3channel.cols
-                     << ", 高度: " << frame_3channel.rows
-                     << ", 步长: " << frame_3channel.step;
-            return;
-            return;
-        }
+        // QImage qImage(frame_3channel.data, frame_3channel.cols, frame_3channel.rows, static_cast<int>(frame_3channel.step), QImage::Format_RGB888);
+        // if (qImage.isNull())
+        // {
+        //     qDebug() << "QImage 创建失败！数据指针: " << frame_3channel.data
+        //              << ", 宽度: " << frame_3channel.cols
+        //              << ", 高度: " << frame_3channel.rows
+        //              << ", 步长: " << frame_3channel.step;
+        //     return;
+        // }
         // 对帧进行算法操作
-        // performAlgorithmOnFrame(frame);
+        QImage qImage(frame.data, frame.cols, frame.rows, static_cast<int>(frame.step), QImage::Format_RGB888);
         QImage swappedImage = qImage.rgbSwapped(); // 原本帧是RGB格式，经过函数后编程BGR格式
 
         // 将处理后的帧显示在QLabel上
@@ -192,38 +191,61 @@ void MainWindow::processFrame()
     }
 }
 
-// cv::Mat MainWindow::applyCLAHE(const cv::Mat &frame)
-// {
-//     cv::Mat processedFrame;
-//     // 检查输入图像的通道数，如果是 3 通道（如 BGR 图像），则转换为单通道灰度图像
-//     if (frame.channels() == 3)
-//     {
-//         cv::cvtColor(frame, processedFrame, cv::COLOR_BGR2GRAY);
-//     }
-//     else
-//     {
-//         processedFrame = frame.clone();
-//     }
+cv::Mat MainWindow::applyCLAHE(const cv::Mat &frame)
+{
+    // 检查 CUDA 是否可用
+    if (cv::cuda::getCudaEnabledDeviceCount() == 0)
+    {
+        qDebug() << "CUDA未启\n";
+        // 创建 CLAHE 对象
+        cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(1.3, cv::Size(5, 5));
 
-//     // 确保图像类型为 CV_8UC1
-//     if (processedFrame.type() != CV_8UC1)
-//     {
-//         processedFrame.convertTo(processedFrame, CV_8UC1);
-//     }
+        // 分离通道
+        std::vector<cv::Mat> bgr_planes;
+        cv::split(frame, bgr_planes);
 
-//     // 上传图像到 GPU
-//     cv::cuda::GpuMat gpu_frame, gpu_clahe_frame;
-//     gpu_frame.upload(processedFrame);
+        // 对每个通道应用 CLAHE
+        cv::Mat b_clahe, g_clahe, r_clahe;
+        clahe->apply(bgr_planes[0], b_clahe);
+        clahe->apply(bgr_planes[1], g_clahe);
+        clahe->apply(bgr_planes[2], r_clahe);
 
-//     // 创建 CUDA CLAHE 对象并处理
-//     cv::Ptr<cv::cuda::CLAHE> clahe = cv::cuda::createCLAHE(1.3, cv::Size(5, 5));
-//     clahe->apply(gpu_frame, gpu_clahe_frame);
+        // 合并通道
+        std::vector<cv::Mat> clahe_planes = {b_clahe, g_clahe, r_clahe};
+        cv::Mat clahe_image;
+        cv::merge(clahe_planes, clahe_image);
 
-//     // 下载结果回 CPU
-//     cv::Mat result;
-//     gpu_clahe_frame.download(result);
-//     return result;
-// }
+        return clahe_image;
+    }
+
+    // 上传图像到 GPU
+    // cv::cuda::GpuMat gpu_frame;
+    gpu_frame.upload(frame);
+
+    // 分离通道
+    std::vector<cv::cuda::GpuMat> bgr_planes_gpu;
+    cv::cuda::split(gpu_frame, bgr_planes_gpu);
+
+    // 创建 CUDA CLAHE 对象
+    cv::Ptr<cv::cuda::CLAHE> clahe = cv::cuda::createCLAHE(1.3, cv::Size(5, 5));
+
+    // 对每个通道应用 CUDA CLAHE
+    cv::cuda::GpuMat b_clahe_gpu, g_clahe_gpu, r_clahe_gpu;
+    clahe->apply(bgr_planes_gpu[0], b_clahe_gpu);
+    clahe->apply(bgr_planes_gpu[1], g_clahe_gpu);
+    clahe->apply(bgr_planes_gpu[2], r_clahe_gpu);
+
+    // 合并通道
+    std::vector<cv::cuda::GpuMat> clahe_planes_gpu = {b_clahe_gpu, g_clahe_gpu, r_clahe_gpu};
+    cv::cuda::GpuMat clahe_image_gpu;
+    cv::cuda::merge(clahe_planes_gpu, clahe_image_gpu);
+
+    // 下载结果到 CPU
+    cv::Mat clahe_image;
+    clahe_image_gpu.download(clahe_image);
+
+    return clahe_image;
+}
 
 // 简化的锐化函数
 

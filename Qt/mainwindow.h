@@ -70,7 +70,7 @@ private:
     GstRTSPMediaFactory *factory;
     void startRTSPServer(const QString &ipAddress);
     void stopRTSPServer();
-    // cv::Mat applyCLAHE(const cv::Mat &frame);
+    cv::Mat applyCLAHE(const cv::Mat &frame);
     cv::cuda::GpuMat gpu_frame, gpu_sharpened;
     cv::cuda::GpuMat gpu_kernel;
     cv::Ptr<cv::cuda::Filter> filter;
