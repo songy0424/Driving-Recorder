@@ -70,6 +70,12 @@ private:
     GstRTSPMediaFactory *factory;
     void startRTSPServer(const QString &ipAddress);
     void stopRTSPServer();
+    // cv::Mat applyCLAHE(const cv::Mat &frame);
+    cv::cuda::GpuMat gpu_frame, gpu_sharpened;
+    cv::cuda::GpuMat gpu_kernel;
+    cv::Ptr<cv::cuda::Filter> filter;
+    cv::Mat sharpened;
+    cv::Mat applySharpening(const cv::Mat &frame);
 };
 
 // ffmpeg -i rtsp://127.0.0.1:8554/test -vf "scale=640:480" -f null -

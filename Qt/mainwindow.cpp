@@ -6,6 +6,9 @@
 #include <QDateTime>
 #include <QPainter>
 #include <QProcess>
+#include <opencv2/opencv.hpp>
+#include <opencv2/cudaarithm.hpp>
+#include <opencv2/cudafilters.hpp>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           ui(new Ui::MainWindow),
@@ -81,7 +84,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     gst_init(nullptr, nullptr);
     // 连接WiFi状态变化信号
     connect(settingsPage, &SettingsPage::wifiStateChanged, this, &MainWindow::onWifiStateChanged);
-    this->showFullScreen();
+    // this->showFullScreen();
     connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽
     connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showNormal);
     timer->start(int(1000 / frameRate)); // 捕获一帧的定时器
@@ -111,9 +114,27 @@ void MainWindow::slot_Photograph()
 
 void MainWindow::processFrame()
 {
+    cv::Mat tmpframe;
     cv::Mat frame;
-    if (camera->grabFrame(frame))
+    cv::Mat frame_3channel;
+    if (camera->grabFrame(tmpframe))
     {
+        // 应用CLAHE
+        // frame = applyCLAHE(frame);
+        // 应用锐化
+        frame = applySharpening(tmpframe);
+        if (frame.empty())
+        {
+            qDebug() << "applySharpening 返回空矩阵！";
+            return;
+        }
+        cv::cvtColor(frame, frame_3channel, cv::COLOR_GRAY2BGR);
+        if (frame_3channel.empty())
+        {
+            qDebug() << "单通道图像转换为 3 通道图像失败！";
+            return;
+        }
+
         addTimestamp(frame);
         if (appsrc)
         {
@@ -141,8 +162,16 @@ void MainWindow::processFrame()
         // {
         //     qDebug() << "can not open src";
         // }
-
-        QImage qImage(frame.data, frame.cols, frame.rows, static_cast<int>(frame.step), QImage::Format_RGB888);
+        QImage qImage(frame_3channel.data, frame_3channel.cols, frame_3channel.rows, static_cast<int>(frame_3channel.step), QImage::Format_RGB888);
+        if (qImage.isNull())
+        {
+            qDebug() << "QImage 创建失败！数据指针: " << frame_3channel.data
+                     << ", 宽度: " << frame_3channel.cols
+                     << ", 高度: " << frame_3channel.rows
+                     << ", 步长: " << frame_3channel.step;
+            return;
+            return;
+        }
         // 对帧进行算法操作
         // performAlgorithmOnFrame(frame);
         QImage swappedImage = qImage.rgbSwapped(); // 原本帧是RGB格式，经过函数后编程BGR格式
@@ -161,6 +190,126 @@ void MainWindow::processFrame()
             slot_SaveVideo(frame); // 将原始帧保存到视频文件
         }
     }
+}
+
+// cv::Mat MainWindow::applyCLAHE(const cv::Mat &frame)
+// {
+//     cv::Mat processedFrame;
+//     // 检查输入图像的通道数，如果是 3 通道（如 BGR 图像），则转换为单通道灰度图像
+//     if (frame.channels() == 3)
+//     {
+//         cv::cvtColor(frame, processedFrame, cv::COLOR_BGR2GRAY);
+//     }
+//     else
+//     {
+//         processedFrame = frame.clone();
+//     }
+
+//     // 确保图像类型为 CV_8UC1
+//     if (processedFrame.type() != CV_8UC1)
+//     {
+//         processedFrame.convertTo(processedFrame, CV_8UC1);
+//     }
+
+//     // 上传图像到 GPU
+//     cv::cuda::GpuMat gpu_frame, gpu_clahe_frame;
+//     gpu_frame.upload(processedFrame);
+
+//     // 创建 CUDA CLAHE 对象并处理
+//     cv::Ptr<cv::cuda::CLAHE> clahe = cv::cuda::createCLAHE(1.3, cv::Size(5, 5));
+//     clahe->apply(gpu_frame, gpu_clahe_frame);
+
+//     // 下载结果回 CPU
+//     cv::Mat result;
+//     gpu_clahe_frame.download(result);
+//     return result;
+// }
+
+// 简化的锐化函数
+
+cv::Mat MainWindow::applySharpening(const cv::Mat &frame)
+{
+    // 检查 CUDA 是否可用
+    if (cv::cuda::getCudaEnabledDeviceCount() == 0)
+    {
+        qDebug() << "CUDA未启用！";
+        return frame.clone(); // 降级处理
+    }
+
+    // 转换为单通道浮点
+    cv::Mat gray_frame;
+    cv::cvtColor(frame, gray_frame, cv::COLOR_BGR2GRAY); // 转为灰度图
+    if (gray_frame.empty())
+    {
+        qDebug() << "灰度图转换失败！";
+        return cv::Mat();
+    }
+    cv::Mat frame_float;
+    gray_frame.convertTo(frame_float, CV_32FC1); // 单通道浮点
+    if (frame_float.empty())
+    {
+        qDebug() << "浮点图转换失败！";
+        return cv::Mat();
+    }
+
+    // 上传数据到 GPU
+    cv::cuda::GpuMat gpu_frame, gpu_laplacian, gpu_sharpened;
+    gpu_frame.upload(frame_float);
+    if (gpu_frame.empty())
+    {
+        qDebug() << "数据上传到 GPU 失败！";
+        return cv::Mat();
+    }
+
+    // 创建 CUDA 拉普拉斯滤波器，将输出类型设置为 CV_32FC1
+    cv::Ptr<cv::cuda::Filter> laplacian_filter = cv::cuda::createLaplacianFilter(CV_32FC1, CV_32FC1, 1);
+
+    // 执行拉普拉斯滤波
+    laplacian_filter->apply(gpu_frame, gpu_laplacian);
+    if (gpu_laplacian.empty())
+    {
+        qDebug() << "拉普拉斯滤波失败！";
+        return cv::Mat();
+    }
+
+    // 创建一个常量 GPU 矩阵表示系数 1.5
+    cv::cuda::GpuMat gpu_coeff;
+    gpu_coeff.create(gpu_laplacian.size(), gpu_laplacian.type());
+    gpu_coeff.setTo(cv::Scalar(1.5));
+
+    // 计算 image - 1.5 * laplacian
+    cv::cuda::GpuMat gpu_temp;
+    cv::cuda::multiply(gpu_laplacian, gpu_coeff, gpu_temp);
+    if (gpu_temp.empty())
+    {
+        qDebug() << "乘法运算失败！";
+        return cv::Mat();
+    }
+    cv::cuda::subtract(gpu_frame, gpu_temp, gpu_sharpened);
+    if (gpu_sharpened.empty())
+    {
+        qDebug() << "减法运算失败！";
+        return cv::Mat();
+    }
+
+    // 下载结果到 CPU
+    cv::Mat sharpened;
+    gpu_sharpened.download(sharpened);
+    if (sharpened.empty())
+    {
+        qDebug() << "数据下载到 CPU 失败！";
+        return cv::Mat();
+    }
+
+    // 转换为 CV_8U 类型
+    cv::convertScaleAbs(sharpened, sharpened);
+    if (sharpened.empty())
+    {
+        qDebug() << "转换为 CV_8U 类型失败！";
+        return cv::Mat();
+    }
+
+    return sharpened;
 }
 
 void MainWindow::displayFrameOnLabel(const QImage &qImage)
