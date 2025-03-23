@@ -70,12 +70,24 @@ private:
     GstRTSPMediaFactory *factory;
     void startRTSPServer(const QString &ipAddress);
     void stopRTSPServer();
-    cv::Mat applyCLAHE(const cv::Mat &frame);
-    cv::cuda::GpuMat gpu_frame, gpu_sharpened;
-    cv::cuda::GpuMat gpu_kernel;
-    cv::Ptr<cv::cuda::Filter> filter;
+
+    cv::Ptr<cv::CLAHE> clahe_cpu;
+    cv::Ptr<cv::cuda::CLAHE> clahe_gpu;
+    cv::Ptr<cv::cuda::Filter> laplacian_filter_gpu;
+    std::vector<cv::Mat> bgr_planes_cpu;
+    std::vector<cv::cuda::GpuMat> bgr_planes_gpu;
+    std::vector<cv::Mat> clahe_planes_cpu;
+    std::vector<cv::cuda::GpuMat> clahe_planes_gpu;
+    cv::cuda::GpuMat blue_clahe_gpu, green_clahe_gpu, red_clahe_gpu;
+    cv::cuda::GpuMat blue_laplacian_gpu, green_laplacian_gpu, red_laplacian_gpu;
+    cv::cuda::GpuMat blue_sharpened_gpu, green_sharpened_gpu, red_sharpened_gpu;
+    cv::cuda::GpuMat clahe_image_gpu;
+    cv::cuda::GpuMat gpu_frame;
+    cv::Mat blue_clahe, green_clahe, red_clahe;
+    cv::Mat clahe_image;
+    cv::Mat laplacian;
     cv::Mat sharpened;
-    cv::Mat applySharpening(const cv::Mat &frame);
+    cv::Mat applyCLAHEAndSharpening(const cv::Mat &frame);
 };
 
 // ffmpeg -i rtsp://127.0.0.1:8554/test -vf "scale=640:480" -f null -
