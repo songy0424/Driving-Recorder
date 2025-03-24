@@ -123,13 +123,23 @@ void MainWindow::processFrame()
 {
     cv::Mat tmpframe;
     cv::Mat frame;
-    // QTime startTime = QTime::currentTime(); // 记录开始时间
-    static int k = 0;
-    static double elapsedTime10 = 0;
+    // static int k = 0;
+    // static double elapsedTime10 = 0;
     if (camera->grabFrame(tmpframe))
     {
-        QTime startTime = QTime::currentTime(); // 记录开始时间
-
+        // QTime startTime = QTime::currentTime(); // 记录开始时间
+        // QFuture<cv::Mat> future = QtConcurrent::run(this, &MainWindow::applyCLAHEAndSharpening, tmpframe);
+        // // 检查任务是否完成
+        // if (!future.isFinished())
+        // {
+        //     // 若未完成，使用捕获的原始帧
+        //     frame = tmpframe;
+        // }
+        // else
+        // {
+        //     // 若已完成，使用处理后的帧
+        //     frame = future.result();
+        // }
         frame = applyCLAHEAndSharpening(tmpframe);
         addTimestamp(frame);
         if (appsrc)
@@ -160,10 +170,6 @@ void MainWindow::processFrame()
             //     if (ret)
             //         qDebug() << "Push buffer error";
         }
-        // 对帧进行算法操作
-        // QFuture<QImage> future = QtConcurrent::run(this, &MainWindow::convertToQImage, frame);
-
-        // QImage swappedImage = future.result();
 
         cv::cvtColor(frame, bgrFrame, cv::COLOR_RGB2BGR); // 确保颜色空间转换正确
         QImage swappedImage(bgrFrame.data, bgrFrame.cols, bgrFrame.rows, static_cast<int>(bgrFrame.step), QImage::Format_RGB888);
@@ -181,32 +187,26 @@ void MainWindow::processFrame()
         {
             slot_SaveVideo(frame); // 将原始帧保存到视频文件
         }
-        QTime endTime = QTime::currentTime();            // 记录结束时间
-        double elapsedTime = startTime.msecsTo(endTime); // 计算时间差（毫秒）
-        elapsedTime10 += elapsedTime;
-        k++;
-        if (k % 10 == 0)
-        {
-            k = 0;
-            elapsedTime10 = elapsedTime10 / 10;
-            // 输出运行时间
-            qDebug() << "processFrame elapsed time:" << elapsedTime << "ms";
-            elapsedTime10 = 0;
-        }
+        // QTime endTime = QTime::currentTime();            // 记录结束时间
+        // double elapsedTime = startTime.msecsTo(endTime); // 计算时间差（毫秒）
+        // elapsedTime10 += elapsedTime;
+        // k++;
+        // if (k % 10 == 0)
+        // {
+        //     k = 0;
+        //     elapsedTime10 = elapsedTime10 / 10;
+        //     // 输出运行时间
+        //     qDebug() << "processFrame elapsed time:" << elapsedTime << "ms";
+        //     elapsedTime10 = 0;
+        // }
     }
 }
 
 cv::Mat MainWindow::applyCLAHEAndSharpening(const cv::Mat &frame)
 {
-    QTime startTime = QTime::currentTime(); // 记录开始时间
-    static int k = 0;
-    static double elapsedTime10 = 0;
-    // 检查 CUDA 是否可用
-    if (cv::cuda::getCudaEnabledDeviceCount() == 0)
-    {
-        qDebug() << "CUDA未启用！\n";
-        return frame.clone();
-    }
+    // QTime startTime = QTime::currentTime(); // 记录开始时间
+    // static int k = 0;
+    // static double elapsedTime10 = 0;
     // cv::cuda::HostMem hostMem(frame, cv::cuda::HostMem::PAGE_LOCKED);
     gpu_frame.upload(frame);
 
@@ -240,18 +240,18 @@ cv::Mat MainWindow::applyCLAHEAndSharpening(const cv::Mat &frame)
 
     clahe_image_gpu.download(sharpened);
 
-    QTime endTime = QTime::currentTime();            // 记录结束时间
-    double elapsedTime = startTime.msecsTo(endTime); // 计算时间差（毫秒）
-    elapsedTime10 += elapsedTime;
-    k++;
-    if (k % 10 == 0)
-    {
-        k = 0;
-        elapsedTime10 = elapsedTime10 / 10;
-        // 输出运行时间
-        qDebug() << "CLAHE time:" << elapsedTime << "ms";
-        elapsedTime10 = 0;
-    }
+    // QTime endTime = QTime::currentTime();            // 记录结束时间
+    // double elapsedTime = startTime.msecsTo(endTime); // 计算时间差（毫秒）
+    // elapsedTime10 += elapsedTime;
+    // k++;
+    // if (k % 10 == 0)
+    // {
+    //     k = 0;
+    //     elapsedTime10 = elapsedTime10 / 10;
+    //     // 输出运行时间
+    //     qDebug() << "CLAHE time:" << elapsedTime << "ms";
+    //     elapsedTime10 = 0;
+    // }
     return !sharpened.empty() ? sharpened : cv::Mat();
 }
 
