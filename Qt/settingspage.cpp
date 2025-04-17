@@ -158,7 +158,7 @@ void SettingsPage::readData()
 
         emit photoIntervalChanged(interval);
     }
-    else if (data == "reset:factory\n")
+    else if (data.startsWith("reset:factory"))
     {
         restoreDefaultConfig();
         return;
@@ -170,6 +170,32 @@ void SettingsPage::readData()
     else if (data == "START_RECORD_VIDEO\n" || data == "STOP_RECORD_VIDEO\n")
     {
         emit RecordVideoTriggered();
+    }
+    else if (data.startsWith("timestamp:"))
+    {
+        QRadioButton *timeStampOnBtn = timeStampDisplayPage->findChild<QRadioButton *>("onButton");
+        QRadioButton *timeStampOffBtn = timeStampDisplayPage->findChild<QRadioButton *>("offButton");
+        QString res = data.split(":")[1];
+        
+        isTimeStampActive = (res == "on\n");
+
+        timeStampOnBtn->setChecked(isTimeStampActive);
+        timeStampOffBtn->setChecked(isTimeStampActive);
+
+        timeStampDisplayButton->setText(isTimeStampActive ? "显示时间标签: 开 >" : "显示时间标签: 关 >");
+    }
+    else if (data.startsWith("enhancement:"))
+    {
+        QRadioButton *enhancementOnBtn = imageEnhancementPage->findChild<QRadioButton *>("onButton");
+        QRadioButton *enhancementOffBtn = imageEnhancementPage->findChild<QRadioButton *>("offButton");
+        QString res = data.split(":")[1];
+        
+        isEnhancementActive = (res == "on\n");
+
+        enhancementOnBtn->setChecked(isEnhancementActive);
+        enhancementOffBtn->setChecked(isEnhancementActive);
+
+        imageEnhancementButton->setText(isEnhancementActive ? "图像增强算法: 开 >" : "图像增强算法: 关 >");
     }
 
     saveCurrentConfig();
@@ -476,7 +502,7 @@ void SettingsPage::restoreDefaultConfig()
     QRadioButton *enhancementOffBtn = imageEnhancementPage->findChild<QRadioButton *>("offButton");
     enhancementOnBtn->setChecked(false);
     enhancementOffBtn->setChecked(true);
-    
+
     saveCurrentConfig();
 }
 

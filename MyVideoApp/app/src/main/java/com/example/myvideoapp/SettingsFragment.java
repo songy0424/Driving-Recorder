@@ -9,6 +9,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -22,14 +23,19 @@ public class SettingsFragment extends Fragment {
     private boolean isInitialized = false;
     private AdapterView.OnItemSelectedListener resolutionListener;
     private AdapterView.OnItemSelectedListener intervalListener;
+    private Switch switchTimestamp;
+    private Switch switchEnhancement;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
 
         mainFragment = (MainFragment) requireActivity().getSupportFragmentManager().findFragmentByTag(MainFragment.class.getName());
+        switchTimestamp = view.findViewById(R.id.switchTimestamp);
+        switchEnhancement = view.findViewById(R.id.switchEnhancement);
         setupResolutionSpinner(view);
         setupIntervalSpinner(view);
+        setupSwitches();
         loadConfigAndSetSpinner(view);
         setupResetButton(view);
         isInitialized = true;
@@ -87,16 +93,36 @@ public class SettingsFragment extends Fragment {
         };
         spinner.setOnItemSelectedListener(intervalListener);
     }
+    private void setupSwitches() {
+        // 时间标签开关监听
+        switchTimestamp.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isInitialized && mainFragment != null) {
+                String command = "timestamp:" + (isChecked ? "on" : "off");
+                mainFragment.sendCommandToQt(command);
+            }
+        });
 
+        // 图像增强算法开关监听
+        switchEnhancement.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isInitialized && mainFragment != null) {
+                String command = "enhancement:" + (isChecked ? "on" : "off");
+                mainFragment.sendCommandToQt(command);
+            }
+        });
+    }
     private void loadConfigAndSetSpinner(View view) {
         new Thread(() -> {
             JSONObject config = SMBConfigReader.loadConfig(requireContext());
             try {
                 int resolutionIndex = config.getInt("resolution/index");
                 int interval = config.getInt("capture/interval");
+                boolean showTimestamp = config.getBoolean("display/showTimeStamp");
+                boolean useEnhancement = config.getBoolean("image/enhancement");
 
                 requireActivity().runOnUiThread(() -> {
                     setSpinnerSelection(resolutionIndex, interval, view);
+                    switchTimestamp.setChecked(showTimestamp);
+                    switchEnhancement.setChecked(useEnhancement);
                 });
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -142,11 +168,11 @@ public class SettingsFragment extends Fragment {
                             // 发送恢复出厂设置命令
                             String command = "reset:factory";
                             mainFragment.sendCommandToQt(command);
-
-                            // 设置分辨率为 1280p
+                            // 重置所有控件
                             setSpinnerResolutionTo1280p(view);
-                            // 设置摄影间隔为 1 分钟
                             setSpinnerIntervalTo1Minute(view);
+                            switchTimestamp.setChecked(true); // 默认开启时间标签
+                            switchEnhancement.setChecked(false); // 默认关闭图像增强
                         }
                     })
                     .setNegativeButton("取消", null)
