@@ -369,7 +369,7 @@ void MainWindow::updateResolution(int width, int height, int frameRate)
     this->width = width;
     this->height = height;
     this->frameRate = frameRate;
-    std::string pipeline = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)" +
+    std::string pipeline = "nvarguscamerasrc sensor-id=0 ee-mode=1 wbmode=1 ispdigitalgainrange=\"1 16\" ! video/x-raw(memory:NVMM), width=(int)" +
                            std::to_string(width) + ", height=(int)" +
                            std::to_string(height) + ", format=(string)NV12, framerate=(fraction)" +
                            std::to_string(frameRate) + "/1 ! "
@@ -377,7 +377,22 @@ void MainWindow::updateResolution(int width, int height, int frameRate)
                            std::to_string(width) + ", height=(int)" +
                            std::to_string(height) + ", format=(string)BGRx ! "
                                                     "videoconvert ! video/x-raw, format=(string)BGR ! appsink";
-
+    /*基础捕获参数
+    wbmode：
+    说明：调整白平衡以影响照片的色温度。
+    设置建议：选择 auto（值为 1），行车过程中光线变化频繁，自动白平衡能让相机根据环境自动调整色彩，保证图像色彩还原准确。
+    ispdigitalgainrange：
+    说明：调整数字增益范围。
+    设置建议：例如设置为 "1 16" ，在低光照环境下提高亮度，同时避免增益过高产生过多噪声。
+    exposurecompensation：
+    说明：调整曝光补偿。
+    设置建议：默认设为 0，遇到特殊光照情况（过亮或过暗），可在 -2 到 2 之间适当调整。
+    降噪和增强参数
+    ee - mode：
+    说明：选择边缘增强模式。
+    设置建议：使用 EdgeEnhancement_Fast（值为 1），在不影响处理速度的前提下，增强图像边缘清晰度。
+    锁定参数
+    */
     camera->closeCamera();
     if (!camera->openCamera(pipeline))
     {
