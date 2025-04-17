@@ -32,6 +32,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     settingsPage = new SettingsPage(this);
     connect(settingsPage, &SettingsPage::returnToMainWindow, this, &MainWindow::showMain);
     connect(settingsPage, &SettingsPage::resolutionChanged, this, &MainWindow::updateResolution);
+    connect(settingsPage, &SettingsPage::resolutionChanged, this, &MainWindow::updateStreamResolution);
     connect(settingsPage, &SettingsPage::photoIntervalChanged, this, &MainWindow::updatePhotoInterval);
     connect(settingsPage, &SettingsPage::saveImageTriggered, this, &MainWindow::slot_Photograph);
     connect(settingsPage, &SettingsPage::RecordVideoTriggered, this, &MainWindow::slot_RecordVideo);
@@ -508,6 +509,29 @@ void MainWindow::media_configure(GstRTSPMediaFactory *factory,
 
         // 释放媒体元素引用
         gst_object_unref(element);
+    }
+}
+
+void MainWindow::updateStreamResolution() 
+{
+    if (appsrc) {
+        // 暂停推流
+        gst_element_set_state(appsrc, GST_STATE_PAUSED);
+        
+        // 更新Caps
+        GstCaps *caps = gst_caps_new_simple("video/x-raw",
+                                            "format", G_TYPE_STRING, "BGR",
+                                            "width", G_TYPE_INT, this->width,
+                                            "height", G_TYPE_INT, this->height,
+                                            "framerate", GST_TYPE_FRACTION, this->frameRate, 1,
+                                            nullptr);
+        g_object_set(appsrc,
+                     "caps", caps,
+                     "stream-type", 0, // GST_APP_STREAM_TYPE_STREAM
+                     nullptr);
+        gst_caps_unref(caps);
+        // 恢复推流
+        gst_element_set_state(appsrc, GST_STATE_PLAYING);
     }
 }
 

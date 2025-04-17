@@ -71,6 +71,7 @@ private:
     GstRTSPMediaFactory *factory;
     void startRTSPServer(const QString &ipAddress);
     void stopRTSPServer();
+    void updateStreamResolution();
 
     cv::Ptr<cv::CLAHE> clahe_cpu;
     cv::Ptr<cv::cuda::CLAHE> clahe_gpu;
