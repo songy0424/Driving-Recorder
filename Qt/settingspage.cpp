@@ -15,7 +15,9 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
                                               isHotspotActive(false),
                                               startupWifiPage(nullptr),
                                               photoIntervalPage(nullptr),
-                                              resolutionSelectionPage(nullptr)
+                                              resolutionSelectionPage(nullptr),
+                                              timeStampDisplayPage(nullptr),
+                                              imageEnhancementPage(nullptr)
 {
     ui->setupUi(this);
     this->hide();
@@ -24,28 +26,33 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     QWidget *mainPage = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(mainPage);
     wifiHotspotButton->setText("Wi-Fi 热点: 关 >");
-    QPushButton *startupWifiButton = new QPushButton("开机 Wi-Fi 设置: 关 >", this);
-    photoIntervalButton = new QPushButton("摄影间隔时间: 1分钟 >", this);
     resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
+    photoIntervalButton = new QPushButton("摄影间隔时间: 1分钟 >", this);
+    timeStampDisplayButton = new QPushButton("显示时间标签: 开 >", this);
+    imageEnhancementButton = new QPushButton("图像增强算法: 关 >", this);
     QPushButton *restoreButton = new QPushButton("恢复出厂设置", this);
     restoreButton->setMinimumSize(100, 70);
     restoreButton->setStyleSheet("QPushButton { font-size: 16px; }");
 
     wifiHotspotButton->setMinimumSize(100, 70);
-    startupWifiButton->setMinimumSize(100, 70);
     photoIntervalButton->setMinimumSize(100, 70);
     resolutionSelectionButton->setMinimumSize(100, 70);
+    timeStampDisplayButton->setMinimumSize(100, 70);
+    imageEnhancementButton->setMinimumSize(100, 70);
     ui->returnButton->setMinimumSize(100, 70);
+
     wifiHotspotButton->setStyleSheet("QPushButton { font-size: 16px;}");
-    startupWifiButton->setStyleSheet("QPushButton { font-size: 16px;}");
     photoIntervalButton->setStyleSheet("QPushButton { font-size: 16px;}");
     resolutionSelectionButton->setStyleSheet("QPushButton { font-size: 16px;}");
+    timeStampDisplayButton->setStyleSheet("QPushButton { font-size: 16px;}");
+    imageEnhancementButton->setStyleSheet("QPushButton { font-size: 16px;}");
     ui->returnButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     mainLayout->addWidget(wifiHotspotButton);
-    mainLayout->addWidget(startupWifiButton);
-    mainLayout->addWidget(photoIntervalButton);
     mainLayout->addWidget(resolutionSelectionButton);
+    mainLayout->addWidget(photoIntervalButton);
+    mainLayout->addWidget(timeStampDisplayButton);
+    mainLayout->addWidget(imageEnhancementButton);
     mainLayout->addWidget(restoreButton);
     mainLayout->addWidget(ui->returnButton);
     mainLayout->addStretch();
@@ -53,13 +60,15 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     mainPage->setLayout(mainLayout);
     stackedWidget->addWidget(mainPage);
 
-    startupWifiPage = createBooleanSelectionPage("开机 Wi-Fi 设置", startupWifiButton);
-    photoIntervalPage = createTimeoutSelectionPage();
     resolutionSelectionPage = createResolutionSelectionPage();
+    photoIntervalPage = createTimeoutSelectionPage();
+    timeStampDisplayPage = createBooleanSelectionPage("显示时间标签", timeStampDisplayButton);
+    imageEnhancementPage = createBooleanSelectionPage("图像增强算法", imageEnhancementButton);
 
-    stackedWidget->addWidget(startupWifiPage);
     stackedWidget->addWidget(photoIntervalPage);
     stackedWidget->addWidget(resolutionSelectionPage);
+    stackedWidget->addWidget(timeStampDisplayPage);
+    stackedWidget->addWidget(imageEnhancementPage);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(stackedWidget);
@@ -67,12 +76,14 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
 
     connect(restoreButton, &QPushButton::clicked, this, &SettingsPage::restoreDefaultConfig);
     connect(wifiHotspotButton, &QPushButton::clicked, this, &SettingsPage::createWiFiHotspot);
-    connect(startupWifiButton, &QPushButton::clicked, this, [=]()
-            { stackedWidget->setCurrentWidget(startupWifiPage); });
     connect(photoIntervalButton, &QPushButton::clicked, this, [=]()
-            { stackedWidget->setCurrentWidget(photoIntervalPage); });
+    { stackedWidget->setCurrentWidget(photoIntervalPage); });
     connect(resolutionSelectionButton, &QPushButton::clicked, this, [=]()
-            { stackedWidget->setCurrentWidget(resolutionSelectionPage); });
+    { stackedWidget->setCurrentWidget(resolutionSelectionPage); });
+    connect(timeStampDisplayButton, &QPushButton::clicked, this, [=]()
+    { stackedWidget->setCurrentWidget(timeStampDisplayPage); });
+    connect(imageEnhancementButton, &QPushButton::clicked, this, [=]()
+    { stackedWidget->setCurrentWidget(imageEnhancementPage); });
     connect(ui->returnButton, &QPushButton::clicked, this, &SettingsPage::returnToMain);
 
     tcpServer = new QTcpServer(this);
@@ -198,14 +209,27 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
 
     connect(confirmButton, &QPushButton::clicked, this, [=]()
             {
-                if (onButton->isChecked())
+                if(title == "显示时间标签" && onButton->isChecked())
                 {
+                    isTimeStampActive = true;
                     mainButton->setText(title + ": 开 >");
                 }
-                else
+                else if(title == "显示时间标签" && offButton->isChecked())
                 {
+                    isTimeStampActive = false;
                     mainButton->setText(title + ": 关 >");
                 }
+                else if(title == "图像增强算法" && onButton->isChecked())
+                {
+                    isEnhancementActive = true;
+                    mainButton->setText(title + ": 开 >");
+                }
+                else if(title == "图像增强算法" && offButton->isChecked())
+                {
+                    isEnhancementActive = false;
+                    mainButton->setText(title + ": 关 >");
+                }
+            
                 stackedWidget->setCurrentIndex(0);
                 saveCurrentConfig(); });
 
@@ -416,13 +440,18 @@ void SettingsPage::restoreDefaultConfig()
     QJsonObject defaultConfig;
     defaultConfig["resolution/index"] = 0;
     defaultConfig["capture/interval"] = 60;
-    defaultConfig["network/hotspot"] = false;
+    defaultConfig["display/showTimeStamp"] = true;
+    defaultConfig["image/enhancement"] = false;
 
     resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
     slot_resolutionChanged(0);
     photoIntervalButton->setText("摄影间隔时间: 1分钟 >");
-    isHotspotActive = false;
-    wifiHotspotButton->setText("Wi-Fi 热点: 关 >");
+    
+    isTimeStampActive = true;
+    timeStampDisplayButton->setText("显示时间标签: 开 >");
+    
+    isEnhancementActive = false;
+    imageEnhancementButton->setText("图像增强算法: 关 >");
 
     QRadioButton *res720p = resolutionSelectionPage->findChild<QRadioButton *>("res720pButton");
     QRadioButton *res1080p = resolutionSelectionPage->findChild<QRadioButton *>("res1080pButton");
@@ -438,11 +467,16 @@ void SettingsPage::restoreDefaultConfig()
     fiveMin->setChecked(false);
     tenMin->setChecked(false);
 
-    QRadioButton *onBtn = startupWifiPage->findChild<QRadioButton *>("onButton");
-    QRadioButton *offBtn = startupWifiPage->findChild<QRadioButton *>("offButton");
-    offBtn->setChecked(true);
-    onBtn->setChecked(false);
+    QRadioButton *timeStampOnBtn = timeStampDisplayPage->findChild<QRadioButton *>("onButton");
+    QRadioButton *timeStampOffBtn = timeStampDisplayPage->findChild<QRadioButton *>("offButton");
+    timeStampOnBtn->setChecked(true);
+    timeStampOffBtn->setChecked(false);
 
+    QRadioButton *enhancementOnBtn = imageEnhancementPage->findChild<QRadioButton *>("onButton");
+    QRadioButton *enhancementOffBtn = imageEnhancementPage->findChild<QRadioButton *>("offButton");
+    enhancementOnBtn->setChecked(false);
+    enhancementOffBtn->setChecked(true);
+    
     saveCurrentConfig();
 }
 
@@ -482,14 +516,24 @@ void SettingsPage::loadInitialConfig()
         if (tenMin)
             tenMin->setChecked(interval == 600);
 
-        isHotspotActive = obj["network/hotspot"].toBool(false);
-        wifiHotspotButton->setText(QString("Wi-Fi 热点: %1 >").arg(isHotspotActive ? "开" : "关"));
-        QRadioButton *onBtn = startupWifiPage->findChild<QRadioButton *>("onButton");
-        QRadioButton *offBtn = startupWifiPage->findChild<QRadioButton *>("offButton");
-        if (onBtn && offBtn)
+        isTimeStampActive = obj["display/showTimeStamp"].toBool(true);
+        QRadioButton *timeStampOnBtn = timeStampDisplayPage->findChild<QRadioButton *>("onButton");
+        QRadioButton *timeStampOffBtn = timeStampDisplayPage->findChild<QRadioButton *>("offButton");
+        if (timeStampOnBtn && timeStampOffBtn)
         {
-            onBtn->setChecked(isHotspotActive);
-            offBtn->setChecked(!isHotspotActive);
+            timeStampDisplayButton->setText(isTimeStampActive ? "显示时间标签: 开 >" : "显示时间标签: 关 >");
+            timeStampOnBtn->setChecked(isTimeStampActive);
+            timeStampOffBtn->setChecked(!isTimeStampActive);
+        }
+
+        isEnhancementActive = obj["image/enhancement"].toBool(false);
+        QRadioButton *enhancementOnBtn = imageEnhancementPage->findChild<QRadioButton *>("onButton");
+        QRadioButton *enhancementOffBtn = imageEnhancementPage->findChild<QRadioButton *>("offButton");
+        if (enhancementOnBtn && enhancementOffBtn)
+        {
+            imageEnhancementButton->setText(isEnhancementActive ? "图像增强算法: 开 >" : "图像增强算法: 关 >");
+            enhancementOnBtn->setChecked(isEnhancementActive);
+            enhancementOffBtn->setChecked(!isEnhancementActive);
         }
 
         file.close();
@@ -517,8 +561,8 @@ QJsonObject SettingsPage::generateConfig()
         obj["capture/interval"] = 60;
     }
 
-    obj["network/hotspot"] = isHotspotActive;
-
+    obj["display/showTimeStamp"] = isTimeStampActive;
+    obj["image/enhancement"] = isEnhancementActive;
     return obj;
 }
 

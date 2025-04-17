@@ -122,26 +122,27 @@ void MainWindow::slot_Photograph()
 void MainWindow::processFrame()
 {
     cv::Mat tmpframe;
-    cv::Mat frame;
     // static int k = 0;
     // static double elapsedTime10 = 0;
     if (camera->grabFrame(tmpframe))
     {
-        // QTime startTime = QTime::currentTime(); // 记录开始时间
-        // QFuture<cv::Mat> future = QtConcurrent::run(this, &MainWindow::applyCLAHEAndSharpening, tmpframe);
-        // // 检查任务是否完成
-        // if (!future.isFinished())
-        // {
-        //     // 若未完成，使用捕获的原始帧
-        //     frame = tmpframe;
-        // }
-        // else
-        // {
-        //     // 若已完成，使用处理后的帧
-        //     frame = future.result();
-        // }
-        frame = applyCLAHEAndSharpening(tmpframe);
-        addTimestamp(frame);
+        cv::Mat& frame = tmpframe;
+        cv::Mat processedFrame;
+        if (settingsPage->EnhancementActive()) {
+            processedFrame = applyCLAHEAndSharpening(tmpframe);
+            frame = processedFrame;
+        }
+        
+        if (settingsPage->TimeStampActive()) {
+            addTimestamp(frame);
+        }
+
+        if (settingsPage->EnhancementActive()) {
+            frame = applyCLAHEAndSharpening(tmpframe);
+        }
+        if (settingsPage->TimeStampActive()) {
+            addTimestamp(frame);
+        }
         if (appsrc)
         {
             GstBuffer *buffer = gst_buffer_new_wrapped_full(GST_MEMORY_FLAG_READONLY,

@@ -27,6 +27,8 @@ public:
     explicit SettingsPage(QWidget *parent = nullptr);
     ~SettingsPage();
     void loadInitialConfig();
+    bool TimeStampActive() const { return isTimeStampActive; }
+    bool EnhancementActive() const { return isEnhancementActive; }
 
 signals:
     void returnToMainWindow();
@@ -51,12 +53,19 @@ private:
     QPushButton *wifiHotspotButton;
     QPushButton *photoIntervalButton;
     QPushButton *resolutionSelectionButton;
+    QPushButton *timeStampDisplayButton;
+    QPushButton *imageEnhancementButton ;
+
     bool isHotspotActive;
+    bool isTimeStampActive;
+    bool isEnhancementActive;
     QTcpServer *tcpServer;
     QTcpSocket *clientSocket;
     QWidget *startupWifiPage;
     QWidget *photoIntervalPage;
     QWidget *resolutionSelectionPage;
+    QWidget *timeStampDisplayPage;
+    QWidget *imageEnhancementPage;
     QWidget *createBooleanSelectionPage(const QString &title, QPushButton *mainButton);
     QWidget *createTimeoutSelectionPage();
     QWidget *createResolutionSelectionPage();
