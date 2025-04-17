@@ -224,8 +224,10 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
     onButton->setMinimumSize(100, 70);
     offButton->setMinimumSize(100, 70);
     confirmButton->setMinimumSize(100, 70);
-    onButton->setStyleSheet("QRadioButton { font-size: 16px; }");
-    offButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    onButton->setStyleSheet("QRadioButton { font-size: 16px; padding-left: 20px; }"
+        "QRadioButton::indicator { width: 24px; height: 24px; }");
+    offButton->setStyleSheet("QRadioButton { font-size: 16px; padding-left: 20px; }"
+        "QRadioButton::indicator { width: 24px; height: 24px; }");
     confirmButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     layout->addWidget(groupBox);
