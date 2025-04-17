@@ -32,14 +32,14 @@ public:
 
 signals:
     void returnToMainWindow();
-    void resolutionChanged(int width, int height, int frameRate);
+    void resolutionChanged(int camera_id, int width, int height, int frameRate);
     void photoIntervalChanged(int interval);
     void wifiStateChanged(bool isActive, const QString &ipAddress);
     void saveImageTriggered();
     void RecordVideoTriggered();
     void configUpdated(const QJsonObject &config);
-    void infraredModeChanged(bool isActive); 
-    
+    void nightModeChanged(int camera_id);
+
 private slots:
     void returnToMain();
     void slot_resolutionChanged(int index);

@@ -33,6 +33,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     settingsPage = new SettingsPage(this);
     connect(settingsPage, &SettingsPage::returnToMainWindow, this, &MainWindow::showMain);
     connect(settingsPage, &SettingsPage::resolutionChanged, this, &MainWindow::updateResolution);
+    connect(settingsPage, &SettingsPage::nightModeChanged, this, [this](int camera_id) {
+        updateResolution(camera_id, width, height, frameRate);
+    });
     connect(settingsPage, &SettingsPage::resolutionChanged, this, &MainWindow::updateStreamResolution);
     connect(settingsPage, &SettingsPage::photoIntervalChanged, this, &MainWindow::updatePhotoInterval);
     connect(settingsPage, &SettingsPage::saveImageTriggered, this, &MainWindow::slot_Photograph);
@@ -372,7 +375,7 @@ void MainWindow::updateResolution(int camera_id, int width, int height, int fram
     this->width = width;
     this->height = height;
     this->frameRate = frameRate;
-    std::string pipeline = "nvarguscamerasrc sensor-id=" + std::to_string(camera_id) + "ee-mode=1 wbmode=1 ispdigitalgainrange=\"1 16\" ! video/x-raw(memory:NVMM), width=(int)" +
+    std::string pipeline = "nvarguscamerasrc sensor-id=" + std::to_string(camera_id) + " ee-mode=1 wbmode=1 ispdigitalgainrange=\"1 16\" ! video/x-raw(memory:NVMM), width=(int)" +
                            std::to_string(width) + ", height=(int)" +
                            std::to_string(height) + ", format=(string)NV12, framerate=(fraction)" +
                            std::to_string(frameRate) + "/1 ! "

@@ -213,6 +213,7 @@ void SettingsPage::readData()
         QString res = data.split(":")[1];
         
         isInfraredActive = (res == "on\n");
+        emit nightModeChanged(isInfraredActive ? 1 : 0);
 
         infraredOnBtn->setChecked(isInfraredActive);
         infraredOffBtn->setChecked(!isInfraredActive);
@@ -282,13 +283,13 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
                 else if(title == "夜间模式" && onButton->isChecked())
                 {
                     isInfraredActive  = true;
-                    emit infraredModeChanged(isInfraredActive);
+                    emit nightModeChanged(1);
                     mainButton->setText(title + ": 开 >");
                 }
                 else if(title == "夜间模式" && offButton->isChecked())
                 {
                     isInfraredActive = false;
-                    emit infraredModeChanged(isInfraredActive);
+                    emit nightModeChanged(0);
                     mainButton->setText(title + ": 关 >");
                 }
             
@@ -452,10 +453,10 @@ void SettingsPage::slot_resolutionChanged(int index)
     switch (index)
     {
     case 0:
-        emit resolutionChanged(1280, 720, 30);
+        emit resolutionChanged((isInfraredActive ? 1 : 0), 1280, 720, 30);
         break;
     case 1:
-        emit resolutionChanged(1920, 1080, 30);
+        emit resolutionChanged((isInfraredActive ? 1 : 0), 1920, 1080, 30);
         break;
     default:
         break;
@@ -510,16 +511,12 @@ void SettingsPage::restoreDefaultConfig()
     defaultConfig["capture/interval"] = 60;
     defaultConfig["display/showTimeStamp"] = true;
     defaultConfig["image/enhancement"] = false;
+    
+    isInfraredActive = false;    
+      infraredModeButton->setText("夜间模式: 关 >");
 
     resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
     slot_resolutionChanged(0);
-
-    isInfraredActive = false;
-    QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("infraredOnButton");
-    QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("infraredOffButton");
-    infraredOffBtn->setChecked(true);
-    infraredOnBtn->setChecked(false);
-    infraredModeButton->setText("夜间模式: 关 >");
 
     photoIntervalButton->setText("摄影间隔时间: 1分钟 >");
     
@@ -533,6 +530,11 @@ void SettingsPage::restoreDefaultConfig()
     QRadioButton *res1080p = resolutionSelectionPage->findChild<QRadioButton *>("res1080pButton");
     res720p->setChecked(true);
     res1080p->setChecked(false);
+
+    QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("infraredOnButton");
+    QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("infraredOffButton");
+    infraredOnBtn->setChecked(false);
+    infraredOffBtn->setChecked(true);
 
     QRadioButton *oneMin = photoIntervalPage->findChild<QRadioButton *>("oneMinButton");
     QRadioButton *threeMin = photoIntervalPage->findChild<QRadioButton *>("threeMinButton");
@@ -613,12 +615,13 @@ void SettingsPage::loadInitialConfig()
         }
 
         isInfraredActive = obj["mode/night"].toBool(false);
-        emit infraredModeChanged(isInfraredActive);
+        emit nightModeChanged(isInfraredActive ? 1 : 0);
+
         QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("onButton");
         QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("offButton");
         if (infraredOnBtn && infraredOffBtn)
         {
-            imageEnhancementButton->setText(isInfraredActive ? "夜间模式: 开 >" : "夜间模式: 关 >");
+            infraredModeButton->setText(isInfraredActive ? "夜间模式: 开 >" : "夜间模式: 关 >");
             infraredOnBtn->setChecked(isInfraredActive);
             infraredOffBtn->setChecked(!isInfraredActive);
         }
