@@ -27,29 +27,34 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     QVBoxLayout *mainLayout = new QVBoxLayout(mainPage);
     wifiHotspotButton->setText("Wi-Fi 热点: 关 >");
     resolutionSelectionButton = new QPushButton("分辨率: 1280x720 30FPS >", this);
+    infraredModeButton = new QPushButton("夜间模式: 关 >", this);
+
     photoIntervalButton = new QPushButton("摄影间隔时间: 1分钟 >", this);
     timeStampDisplayButton = new QPushButton("显示时间标签: 开 >", this);
     imageEnhancementButton = new QPushButton("图像增强算法: 关 >", this);
     QPushButton *restoreButton = new QPushButton("恢复出厂设置", this);
-    restoreButton->setMinimumSize(100, 70);
+    restoreButton->setMinimumSize(100, 65);
     restoreButton->setStyleSheet("QPushButton { font-size: 16px; }");
 
-    wifiHotspotButton->setMinimumSize(100, 70);
-    photoIntervalButton->setMinimumSize(100, 70);
-    resolutionSelectionButton->setMinimumSize(100, 70);
-    timeStampDisplayButton->setMinimumSize(100, 70);
-    imageEnhancementButton->setMinimumSize(100, 70);
-    ui->returnButton->setMinimumSize(100, 70);
+    wifiHotspotButton->setMinimumSize(100, 65);
+    photoIntervalButton->setMinimumSize(100, 65);
+    resolutionSelectionButton->setMinimumSize(100, 65);
+    infraredModeButton->setMinimumSize(100, 65);
+    timeStampDisplayButton->setMinimumSize(100, 65);
+    imageEnhancementButton->setMinimumSize(100, 65);
+    ui->returnButton->setMinimumSize(100, 65);
 
     wifiHotspotButton->setStyleSheet("QPushButton { font-size: 16px;}");
     photoIntervalButton->setStyleSheet("QPushButton { font-size: 16px;}");
     resolutionSelectionButton->setStyleSheet("QPushButton { font-size: 16px;}");
+    infraredModeButton->setStyleSheet("QPushButton { font-size: 16px;}");
     timeStampDisplayButton->setStyleSheet("QPushButton { font-size: 16px;}");
     imageEnhancementButton->setStyleSheet("QPushButton { font-size: 16px;}");
     ui->returnButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     mainLayout->addWidget(wifiHotspotButton);
     mainLayout->addWidget(resolutionSelectionButton);
+    mainLayout->addWidget(infraredModeButton);
     mainLayout->addWidget(photoIntervalButton);
     mainLayout->addWidget(timeStampDisplayButton);
     mainLayout->addWidget(imageEnhancementButton);
@@ -64,11 +69,13 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     photoIntervalPage = createTimeoutSelectionPage();
     timeStampDisplayPage = createBooleanSelectionPage("显示时间标签", timeStampDisplayButton);
     imageEnhancementPage = createBooleanSelectionPage("图像增强算法", imageEnhancementButton);
+    infraredModePage = createBooleanSelectionPage("夜间模式", infraredModeButton);
 
     stackedWidget->addWidget(photoIntervalPage);
     stackedWidget->addWidget(resolutionSelectionPage);
     stackedWidget->addWidget(timeStampDisplayPage);
     stackedWidget->addWidget(imageEnhancementPage);
+    stackedWidget->addWidget(infraredModePage);
 
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(stackedWidget);
@@ -80,6 +87,8 @@ SettingsPage::SettingsPage(QWidget *parent) : QWidget(parent),
     { stackedWidget->setCurrentWidget(photoIntervalPage); });
     connect(resolutionSelectionButton, &QPushButton::clicked, this, [=]()
     { stackedWidget->setCurrentWidget(resolutionSelectionPage); });
+    connect(infraredModeButton, &QPushButton::clicked, this, [=]()
+    { stackedWidget->setCurrentWidget(infraredModePage); });
     connect(timeStampDisplayButton, &QPushButton::clicked, this, [=]()
     { stackedWidget->setCurrentWidget(timeStampDisplayPage); });
     connect(imageEnhancementButton, &QPushButton::clicked, this, [=]()
@@ -197,6 +206,19 @@ void SettingsPage::readData()
 
         imageEnhancementButton->setText(isEnhancementActive ? "图像增强算法: 开 >" : "图像增强算法: 关 >");
     }
+    else if (data.startsWith("infrared:"))
+    {
+        QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("infraredOnButton");
+        QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("infraredOffButton");
+        QString res = data.split(":")[1];
+        
+        isInfraredActive = (res == "on\n");
+
+        infraredOnBtn->setChecked(isInfraredActive);
+        infraredOffBtn->setChecked(!isInfraredActive);
+        
+        infraredModeButton->setText(isInfraredActive ? "夜间模式: 开 >" : "夜间模式: 关 >");
+      }
 
     saveCurrentConfig();
 }
@@ -257,6 +279,18 @@ QWidget *SettingsPage::createBooleanSelectionPage(const QString &title, QPushBut
                     isEnhancementActive = false;
                     mainButton->setText(title + ": 关 >");
                 }
+                else if(title == "夜间模式" && onButton->isChecked())
+                {
+                    isInfraredActive  = true;
+                    emit infraredModeChanged(isInfraredActive);
+                    mainButton->setText(title + ": 开 >");
+                }
+                else if(title == "夜间模式" && offButton->isChecked())
+                {
+                    isInfraredActive = false;
+                    emit infraredModeChanged(isInfraredActive);
+                    mainButton->setText(title + ": 关 >");
+                }
             
                 stackedWidget->setCurrentIndex(0);
                 saveCurrentConfig(); });
@@ -295,10 +329,14 @@ QWidget *SettingsPage::createTimeoutSelectionPage()
     fiveMinButton->setMinimumSize(100, 70);
     tenMinButton->setMinimumSize(100, 70);
     confirmButton->setMinimumSize(100, 70);
-    oneMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
-    threeMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
-    fiveMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
-    tenMinButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    oneMinButton->setStyleSheet("QRadioButton { font-size: 16px; padding-left: 20px; }"
+        "QRadioButton::indicator { width: 24px; height: 24px; }");
+    threeMinButton->setStyleSheet("QRadioButton { font-size: 16px; padding-left: 20px; }"
+        "QRadioButton::indicator { width: 24px; height: 24px; }");
+    fiveMinButton->setStyleSheet("QRadioButton { font-size: 16px; padding-left: 20px; }"
+        "QRadioButton::indicator { width: 24px; height: 24px; }");
+    tenMinButton->setStyleSheet("QRadioButton { font-size: 16px; padding-left: 20px; }"
+        "QRadioButton::indicator { width: 24px; height: 24px; }");
     confirmButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     layout->addWidget(groupBox);
@@ -359,8 +397,10 @@ QWidget *SettingsPage::createResolutionSelectionPage()
     res720pButton->setMinimumSize(100, 70);
     res1080pButton->setMinimumSize(100, 70);
     confirmButton->setMinimumSize(100, 70);
-    res720pButton->setStyleSheet("QRadioButton { font-size: 16px; }");
-    res1080pButton->setStyleSheet("QRadioButton { font-size: 16px; }");
+    res720pButton->setStyleSheet("QRadioButton { font-size: 16px; padding-left: 20px; }"
+        "QRadioButton::indicator { width: 24px; height: 24px; }");
+    res1080pButton->setStyleSheet("QRadioButton { font-size: 16px; padding-left: 20px; }"
+        "QRadioButton::indicator { width: 24px; height: 24px; }");
     confirmButton->setStyleSheet("QPushButton { font-size: 16px;}");
 
     layout->addWidget(groupBox);
@@ -473,6 +513,14 @@ void SettingsPage::restoreDefaultConfig()
 
     resolutionSelectionButton->setText("分辨率: 1280x720 30FPS >");
     slot_resolutionChanged(0);
+
+    isInfraredActive = false;
+    QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("infraredOnButton");
+    QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("infraredOffButton");
+    infraredOffBtn->setChecked(true);
+    infraredOnBtn->setChecked(false);
+    infraredModeButton->setText("夜间模式: 关 >");
+
     photoIntervalButton->setText("摄影间隔时间: 1分钟 >");
     
     isTimeStampActive = true;
@@ -564,6 +612,17 @@ void SettingsPage::loadInitialConfig()
             enhancementOffBtn->setChecked(!isEnhancementActive);
         }
 
+        isInfraredActive = obj["mode/night"].toBool(false);
+        emit infraredModeChanged(isInfraredActive);
+        QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("onButton");
+        QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("offButton");
+        if (infraredOnBtn && infraredOffBtn)
+        {
+            imageEnhancementButton->setText(isInfraredActive ? "夜间模式: 开 >" : "夜间模式: 关 >");
+            infraredOnBtn->setChecked(isInfraredActive);
+            infraredOffBtn->setChecked(!isInfraredActive);
+        }
+
         file.close();
     }
     else
@@ -591,6 +650,7 @@ QJsonObject SettingsPage::generateConfig()
 
     obj["display/showTimeStamp"] = isTimeStampActive;
     obj["image/enhancement"] = isEnhancementActive;
+    obj["mode/night"] = isInfraredActive;
     return obj;
 }
 

@@ -38,7 +38,8 @@ signals:
     void saveImageTriggered();
     void RecordVideoTriggered();
     void configUpdated(const QJsonObject &config);
-
+    void infraredModeChanged(bool isActive); 
+    
 private slots:
     void returnToMain();
     void slot_resolutionChanged(int index);
@@ -55,10 +56,11 @@ private:
     QPushButton *resolutionSelectionButton;
     QPushButton *timeStampDisplayButton;
     QPushButton *imageEnhancementButton ;
-
+    QPushButton *infraredModeButton;
     bool isHotspotActive;
     bool isTimeStampActive;
     bool isEnhancementActive;
+    bool isInfraredActive;  
     QTcpServer *tcpServer;
     QTcpSocket *clientSocket;
     QWidget *startupWifiPage;
@@ -66,6 +68,7 @@ private:
     QWidget *resolutionSelectionPage;
     QWidget *timeStampDisplayPage;
     QWidget *imageEnhancementPage;
+    QWidget *infraredModePage;
     QWidget *createBooleanSelectionPage(const QString &title, QPushButton *mainButton);
     QWidget *createTimeoutSelectionPage();
     QWidget *createResolutionSelectionPage();

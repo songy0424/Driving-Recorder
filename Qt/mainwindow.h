@@ -38,12 +38,13 @@ private slots:
     void updateVideoFile();
     void showSettings(); // 切换到设置页面的槽函数
     void showMain();     // 显示主窗口的槽函数
-    void updateResolution(int width, int height, int frameRate);
+    void updateResolution(int camera_id, int width, int height, int frameRate);
     void addTimestamp(cv::Mat &frame);
     void updatePhotoInterval(int interval);
     void onWifiStateChanged(bool isActive, const QString &ipAddress);
 
 private:
+    int camera_id;
     int width;      // 类的成员变量，用于宽度
     int height;     // 类的成员变量，用于高度
     int frameRate;  // 类的成员变量，用于帧率
@@ -95,5 +96,5 @@ private:
 // ffmpeg -i rtsp://127.0.0.1:8554/test -vf "scale=640:480" -f null -
 // ./test-launch2 "( videotestsrc ! x264enc ! rtph264pay name=pay0 pt=96 )"
 // gcc test-launch.c -o test-launch2 $(pkg-config --cflags --libs gstreamer-rtsp-server-1.0 gstreamer-1.0)
-
+// sudo date -s "20250417 22:08:00"
 #endif // MAINWINDOW_H

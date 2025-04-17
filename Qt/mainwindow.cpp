@@ -19,6 +19,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
                                           isRecordVideo(false),
                                           videoTimer(new QTimer(this)),
                                           timeTimer(new QTimer(this)),
+                                          camera_id(0),
                                           width(1280),   // 默认分辨率宽度
                                           height(720),   // 默认分辨率高度
                                           frameRate(30), // 默认帧率
@@ -365,13 +366,13 @@ void MainWindow::showMain()
     // this->showNormal();               // 确保以正常模式显示
 }
 
-void MainWindow::updateResolution(int width, int height, int frameRate)
+void MainWindow::updateResolution(int camera_id, int width, int height, int frameRate)
 {
     // 更新摄像头分辨率
     this->width = width;
     this->height = height;
     this->frameRate = frameRate;
-    std::string pipeline = "nvarguscamerasrc sensor-id=0 ee-mode=1 wbmode=1 ispdigitalgainrange=\"1 16\" ! video/x-raw(memory:NVMM), width=(int)" +
+    std::string pipeline = "nvarguscamerasrc sensor-id=" + std::to_string(camera_id) + "ee-mode=1 wbmode=1 ispdigitalgainrange=\"1 16\" ! video/x-raw(memory:NVMM), width=(int)" +
                            std::to_string(width) + ", height=(int)" +
                            std::to_string(height) + ", format=(string)NV12, framerate=(fraction)" +
                            std::to_string(frameRate) + "/1 ! "
