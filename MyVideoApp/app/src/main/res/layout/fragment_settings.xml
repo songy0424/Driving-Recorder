@@ -44,7 +44,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/setting1Layout" />
-    <!-- 第二组设置项：摄影间隔 -->
+
     <LinearLayout
         android:id="@+id/setting2Layout"
         android:layout_width="match_parent"
@@ -85,10 +85,36 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/setting2Layout" />
-    <!-- 第二组设置项：摄影间隔 -->
 
     <FrameLayout
         android:id="@+id/setting3Layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="10dp"
+        android:padding="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/divider2">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:text="夜间模式"
+            android:textColor="#000"
+            android:textSize="18sp" />
+
+        <Switch
+            android:id="@+id/switchNightMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right|center_vertical"
+            android:layout_marginStart="20dp" />
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/setting4Layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -96,7 +122,7 @@
         android:padding="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/divider2">
+        app:layout_constraintTop_toBottomOf="@id/setting3Layout">
 
         <TextView
             android:layout_width="wrap_content"
@@ -115,7 +141,7 @@
     </FrameLayout>
 
     <FrameLayout
-        android:id="@+id/setting4Layout"
+        android:id="@+id/setting5Layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -123,7 +149,7 @@
         android:padding="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/setting3Layout">
+        app:layout_constraintTop_toBottomOf="@id/setting4Layout">
 
         <TextView
             android:layout_width="wrap_content"
@@ -140,6 +166,7 @@
             android:layout_gravity="right|center_vertical"
             android:layout_marginStart="20dp" />
     </FrameLayout>
+
     <Button
         android:id="@+id/resetButton"
         android:layout_width="match_parent"
@@ -148,7 +175,7 @@
         android:layout_marginTop="10dp"
         android:padding="14sp"
         android:textSize="18sp"
-        app:layout_constraintTop_toBottomOf="@id/setting4Layout"
+        app:layout_constraintTop_toBottomOf="@id/setting5Layout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

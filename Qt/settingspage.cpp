@@ -206,10 +206,10 @@ void SettingsPage::readData()
 
         imageEnhancementButton->setText(isEnhancementActive ? "图像增强算法: 开 >" : "图像增强算法: 关 >");
     }
-    else if (data.startsWith("infrared:"))
+    else if (data.startsWith("nightmode:"))
     {
-        QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("infraredOnButton");
-        QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("infraredOffButton");
+        QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("onButton");
+        QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("offButton");
         QString res = data.split(":")[1];
         
         isInfraredActive = (res == "on\n");
@@ -531,8 +531,8 @@ void SettingsPage::restoreDefaultConfig()
     res720p->setChecked(true);
     res1080p->setChecked(false);
 
-    QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("infraredOnButton");
-    QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("infraredOffButton");
+    QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("onButton");
+    QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("offButton");
     infraredOnBtn->setChecked(false);
     infraredOffBtn->setChecked(true);
 
@@ -566,6 +566,7 @@ void SettingsPage::loadInitialConfig()
         QByteArray data = file.readAll();
         QJsonDocument doc = QJsonDocument::fromJson(data);
         QJsonObject obj = doc.object();
+        isInfraredActive = obj["mode/night"].toBool(false);
 
         int resIndex = obj["resolution/index"].toInt(0);
         QRadioButton *res720p = resolutionSelectionPage->findChild<QRadioButton *>("res720pButton");
@@ -613,9 +614,6 @@ void SettingsPage::loadInitialConfig()
             enhancementOnBtn->setChecked(isEnhancementActive);
             enhancementOffBtn->setChecked(!isEnhancementActive);
         }
-
-        isInfraredActive = obj["mode/night"].toBool(false);
-        emit nightModeChanged(isInfraredActive ? 1 : 0);
 
         QRadioButton *infraredOnBtn = infraredModePage->findChild<QRadioButton *>("onButton");
         QRadioButton *infraredOffBtn = infraredModePage->findChild<QRadioButton *>("offButton");

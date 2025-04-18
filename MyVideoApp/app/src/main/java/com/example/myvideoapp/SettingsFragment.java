@@ -23,6 +23,7 @@ public class SettingsFragment extends Fragment {
     private boolean isInitialized = false;
     private AdapterView.OnItemSelectedListener resolutionListener;
     private AdapterView.OnItemSelectedListener intervalListener;
+    private Switch switchNightMode;
     private Switch switchTimestamp;
     private Switch switchEnhancement;
 
@@ -31,6 +32,7 @@ public class SettingsFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
 
         mainFragment = (MainFragment) requireActivity().getSupportFragmentManager().findFragmentByTag(MainFragment.class.getName());
+        switchNightMode = view.findViewById(R.id.switchNightMode);
         switchTimestamp = view.findViewById(R.id.switchTimestamp);
         switchEnhancement = view.findViewById(R.id.switchEnhancement);
         setupResolutionSpinner(view);
@@ -94,6 +96,13 @@ public class SettingsFragment extends Fragment {
         spinner.setOnItemSelectedListener(intervalListener);
     }
     private void setupSwitches() {
+        //夜间模式开关监听
+        switchNightMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isInitialized && mainFragment != null) {
+                String command = "nightmode:" + (isChecked ? "on" : "off");
+                mainFragment.sendCommandToQt(command);
+            }
+        });
         // 时间标签开关监听
         switchTimestamp.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isInitialized && mainFragment != null) {
@@ -118,11 +127,13 @@ public class SettingsFragment extends Fragment {
                 int interval = config.getInt("capture/interval");
                 boolean showTimestamp = config.getBoolean("display/showTimeStamp");
                 boolean useEnhancement = config.getBoolean("image/enhancement");
+                boolean nightMode = config.getBoolean("mode/night");
 
                 requireActivity().runOnUiThread(() -> {
                     setSpinnerSelection(resolutionIndex, interval, view);
                     switchTimestamp.setChecked(showTimestamp);
                     switchEnhancement.setChecked(useEnhancement);
+                    switchNightMode.setChecked(nightMode);
                 });
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -173,6 +184,7 @@ public class SettingsFragment extends Fragment {
                             setSpinnerIntervalTo1Minute(view);
                             switchTimestamp.setChecked(true); // 默认开启时间标签
                             switchEnhancement.setChecked(false); // 默认关闭图像增强
+                            switchNightMode.setChecked(false);
                         }
                     })
                     .setNegativeButton("取消", null)
