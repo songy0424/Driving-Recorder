@@ -66,10 +66,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     recordingLabel_1->hide(); // 初始时隐藏
     recordingLabel_2->hide(); // 初始时隐藏
 
-    startIcon = QIcon("/home/nvidia/my_project/new_camera/image/start.png");         // 假设图标文件名为 start.png
-    stopIcon = QIcon("/home/nvidia/my_project/new_camera/image/stop.png");           // 假设图标文件名为 stop.png
-    takePhotoIcon = QIcon("/home/nvidia/my_project/new_camera/image/takePhoto.png"); // 假设图标文件名为 stop.png
-    settingIcon = QIcon("/home/nvidia/my_project/new_camera/image/setting.png");     // 假设图标文件名为 stop.png
+    startIcon = QIcon("/home/nvidia/my_project/new_camera/image/start.png");
+    stopIcon = QIcon("/home/nvidia/my_project/new_camera/image/stop.png");
+    takePhotoIcon = QIcon("/home/nvidia/my_project/new_camera/image/takePhoto.png");
+    settingIcon = QIcon("/home/nvidia/my_project/new_camera/image/setting.png");
 
     ui->recordButton->setStyleSheet("");
     ui->recordButton->setStyleSheet("QPushButton { border:none; background-color: transparent; }");
@@ -96,7 +96,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
     gst_init(nullptr, nullptr);
     // 连接WiFi状态变化信号
     connect(settingsPage, &SettingsPage::wifiStateChanged, this, &MainWindow::onWifiStateChanged);
-    // this->showFullScreen();
+    this->showFullScreen();
     connect(timeTimer, &QTimer::timeout, this, &MainWindow::updateTime); // 连接信号和槽
     connect(ui->testButton, &QPushButton::clicked, this, &MainWindow::showNormal);
     timer->start(int(1000 / frameRate)); // 捕获一帧的定时器
@@ -127,8 +127,6 @@ void MainWindow::slot_Photograph()
 void MainWindow::processFrame()
 {
     cv::Mat tmpframe;
-    // static int k = 0;
-    // static double elapsedTime10 = 0;
     if (camera->grabFrame(tmpframe))
     {
         cv::Mat& frame = tmpframe;
@@ -193,27 +191,11 @@ void MainWindow::processFrame()
         {
             slot_SaveVideo(frame); // 将原始帧保存到视频文件
         }
-        // QTime endTime = QTime::currentTime();            // 记录结束时间
-        // double elapsedTime = startTime.msecsTo(endTime); // 计算时间差（毫秒）
-        // elapsedTime10 += elapsedTime;
-        // k++;
-        // if (k % 10 == 0)
-        // {
-        //     k = 0;
-        //     elapsedTime10 = elapsedTime10 / 10;
-        //     // 输出运行时间
-        //     qDebug() << "processFrame elapsed time:" << elapsedTime << "ms";
-        //     elapsedTime10 = 0;
-        // }
     }
 }
 
 cv::Mat MainWindow::applyCLAHEAndSharpening(const cv::Mat &frame)
 {
-    // QTime startTime = QTime::currentTime(); // 记录开始时间
-    // static int k = 0;
-    // static double elapsedTime10 = 0;
-    // cv::cuda::HostMem hostMem(frame, cv::cuda::HostMem::PAGE_LOCKED);
     gpu_frame.upload(frame);
 
     // 分离通道
@@ -224,21 +206,6 @@ cv::Mat MainWindow::applyCLAHEAndSharpening(const cv::Mat &frame)
     clahe_gpu->apply(bgr_planes_gpu[1], green_clahe_gpu);
     clahe_gpu->apply(bgr_planes_gpu[2], red_clahe_gpu);
 
-    // // 应用拉普拉斯滤波
-    // laplacian_filter_gpu->apply(blue_clahe_gpu, blue_laplacian_gpu);
-    // laplacian_filter_gpu->apply(green_clahe_gpu, green_laplacian_gpu);
-    // laplacian_filter_gpu->apply(red_clahe_gpu, red_laplacian_gpu);
-
-    // // 锐化处理
-    // cv::cuda::addWeighted(blue_clahe_gpu, 1.0, blue_laplacian_gpu, -1.5, 0, blue_sharpened_gpu, CV_8U);
-    // cv::cuda::addWeighted(green_clahe_gpu, 1.0, green_laplacian_gpu, -1.5, 0, green_sharpened_gpu, CV_8U);
-    // cv::cuda::addWeighted(red_clahe_gpu, 1.0, red_laplacian_gpu, -1.5, 0, red_sharpened_gpu, CV_8U);
-
-    // // 合并通道
-    // clahe_planes_gpu[0] = blue_sharpened_gpu;
-    // clahe_planes_gpu[1] = green_sharpened_gpu;
-    // clahe_planes_gpu[2] = red_sharpened_gpu;
-
     clahe_planes_gpu[0] = blue_clahe_gpu;
     clahe_planes_gpu[1] = green_clahe_gpu;
     clahe_planes_gpu[2] = red_clahe_gpu;
@@ -246,18 +213,6 @@ cv::Mat MainWindow::applyCLAHEAndSharpening(const cv::Mat &frame)
 
     clahe_image_gpu.download(sharpened);
 
-    // QTime endTime = QTime::currentTime();            // 记录结束时间
-    // double elapsedTime = startTime.msecsTo(endTime); // 计算时间差（毫秒）
-    // elapsedTime10 += elapsedTime;
-    // k++;
-    // if (k % 10 == 0)
-    // {
-    //     k = 0;
-    //     elapsedTime10 = elapsedTime10 / 10;
-    //     // 输出运行时间
-    //     qDebug() << "CLAHE time:" << elapsedTime << "ms";
-    //     elapsedTime10 = 0;
-    // }
     return !sharpened.empty() ? sharpened : cv::Mat();
 }
 
@@ -309,7 +264,7 @@ void MainWindow::slot_RecordVideo()
             recordingLabel_2->show(); // 显示录制中的标签
 
             connect(videoTimer, &QTimer::timeout, this, &MainWindow::updateVideoFile);
-            videoTimer->start(60000); // 设置定时器时间为60000毫秒（1分钟）
+            videoTimer->start(interval * 1000); // 设置定时器时间
         }
     }
     else if (videorecord.isOpened() && isRecordVideo)
@@ -362,11 +317,6 @@ void MainWindow::showMain()
 {
     settingsPage->hide(); // 隐藏设置页面
     this->show();         // 显示主窗口
-
-    // 不全屏显示
-    // settingsPage->hide();
-    // this->setWindowFlags(Qt::Window); // 重置窗口标志为普通窗口
-    // this->showNormal();               // 确保以正常模式显示
 }
 
 void MainWindow::updateResolution(int camera_id, int width, int height, int frameRate)
@@ -415,7 +365,7 @@ void MainWindow::addTimestamp(cv::Mat &frame)
 void MainWindow::updatePhotoInterval(int interval)
 {
     // 更新定时器时间
-    videoTimer->start(interval * 1000); // 将分钟转换为毫秒
+    this->interval = interval;
     qDebug("摄影间隔时间修改为 %d 分钟", interval / 60);
 }
 void MainWindow::onWifiStateChanged(bool isActive, const QString &ipAddress)

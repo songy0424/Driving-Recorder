@@ -519,7 +519,8 @@ void SettingsPage::restoreDefaultConfig()
     slot_resolutionChanged(0);
 
     photoIntervalButton->setText("摄影间隔时间: 1分钟 >");
-    
+    emit photoIntervalChanged(60);
+
     isTimeStampActive = true;
     timeStampDisplayButton->setText("显示时间标签: 开 >");
     
@@ -594,6 +595,7 @@ void SettingsPage::loadInitialConfig()
             fiveMin->setChecked(interval == 300);
         if (tenMin)
             tenMin->setChecked(interval == 600);
+        emit photoIntervalChanged(interval);
 
         isTimeStampActive = obj["display/showTimeStamp"].toBool(true);
         QRadioButton *timeStampOnBtn = timeStampDisplayPage->findChild<QRadioButton *>("onButton");

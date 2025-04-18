@@ -49,6 +49,7 @@ private:
     int height;     // 类的成员变量，用于高度
     int frameRate;  // 类的成员变量，用于帧率
     int frameCount; // 声明 frameCount 成员变量
+    int interval;
     Ui::MainWindow *ui;
     Camera *camera;
     QLabel *imageLabel;       // 用于显示图片的QTimer
@@ -96,5 +97,5 @@ private:
 // ffmpeg -i rtsp://127.0.0.1:8554/test -vf "scale=640:480" -f null -
 // ./test-launch2 "( videotestsrc ! x264enc ! rtph264pay name=pay0 pt=96 )"
 // gcc test-launch.c -o test-launch2 $(pkg-config --cflags --libs gstreamer-rtsp-server-1.0 gstreamer-1.0)
-// sudo date -s "20250417 22:08:00"
+// sudo date -s "20250418 17:08:00"
 #endif // MAINWINDOW_H
